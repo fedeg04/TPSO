@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <utils/hello.h>
+#include <../include/init.h>
 
 int main(int argc, char* argv[]) {
     decir_hola("Kernel");
