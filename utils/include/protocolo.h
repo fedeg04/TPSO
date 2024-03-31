@@ -1,0 +1,32 @@
+#ifndef PROTOCOLO_H_
+#define PROTOCOLO_H_
+
+typedef enum {
+    SET = 1,
+    MOV_IN,
+    MOV_OUT,
+    SUM,
+    SUB,
+    JNZ,
+    RESIZE,
+    COPY_STRING,
+    WAIT,
+    SIGNAL,
+    IO_GEN_SLEEP,
+    IO_STDIN_READ,
+    IO_STDOUT_WRITE,
+    IO_FS_CREATE,
+    IO_FS_DELETE,
+    IO_FS_TRUNCATE,
+    IO_FS_WRITE,
+    IO_FS_READ,
+    EXIT,
+    EJECUTAR_SCRIPT,
+    INICIAR_PROCESO,
+    FINALIZAR_PROCESO,
+    DETENER_PLANIFICACION,
+    INICIAR_PLANIFICACION,
+    PROCESO_ESTADO 
+} op_code
+
+#endif
