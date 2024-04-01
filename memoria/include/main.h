@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <../include/init.h>
+#include <../include/conexion.h>
 
 char* puerto_escucha;
 

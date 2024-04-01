@@ -20,14 +20,20 @@ int iniciar_servidor(t_log* logger, char* puerto)
    return socket_servidor;
 }
 
-int server_escuchar(int socket_server, t_log* logger) {
-
+int server_escuchar(int socket_server, t_log* logger, procesar_conexion_func_t procesar_conexion_func) {
     int socket_cliente = esperar_cliente(socket_server, logger);
     if(socket_cliente != -1) {
-
+        pthread_t hilo;
+        conexion_args_t* args = malloc(sizeof(conexion_args_t));
+        args->logger = logger;
+        args->socket_server = socket_server;
+        pthread_create(&hilo, NULL, procesar_conexion_func, (void*) args);
+        pthread_detach(hilo);
+        return 1; 
         //TODO: agregarle hilos probablemente, y hacer procesar conexión en todos los módulos server (protocolo de cada uno)
         //procesar_conexion(logger, socket_cliente);
     }
+    return 0;
 }
 
 int esperar_cliente(int socket_servidor, t_log* logger) {

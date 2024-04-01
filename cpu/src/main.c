@@ -16,11 +16,11 @@ int main(int argc, char* argv[]) {
 
     //Empieza el servidor dispatch
     int cpu_dispatch_fd = iniciar_servidor(logger_cpu, puerto_escucha_dispatch);
-    while(server_escuchar(cpu_dispatch_fd, logger_cpu));
+    while(server_escuchar(cpu_dispatch_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion));
 
     //Empieza el servidor interrupt
     int cpu_interrupt_fd = iniciar_servidor(logger_cpu, puerto_escucha_interrupt);
-    while(server_escuchar(cpu_interrupt_fd, logger_cpu));
+    while(server_escuchar(cpu_interrupt_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion));
 
     //Se conecta como cliente a la memoria
     int memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);
