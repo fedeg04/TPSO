@@ -11,8 +11,8 @@ int main(int argc, char* argv[]) {
     get_config(config_memoria);
 
     //Empieza el servidor
-    int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha);
-    while(server_escuchar(memoria_fd, logger_memoria, (procesar_conexion_func_t)procesar_conexion));
+    int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha, "memoria");
+    while(server_escuchar(memoria_fd, logger_memoria, (procesar_conexion_func_t)procesar_conexion, "memoria"));
 
     terminar_programa(logger_memoria, config_memoria);
 

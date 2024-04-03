@@ -14,18 +14,25 @@ int main(int argc, char* argv[]) {
     t_config* config_cpu = iniciar_config("cpu.config");
     get_config(config_cpu);
 
+    int* flag_dispatch_encendido = malloc(sizeof(int));
+    int* flag_interrupt_encendido = malloc(sizeof(int));
+
     //Empieza el servidor dispatch
-    int cpu_dispatch_fd = iniciar_servidor(logger_cpu, puerto_escucha_dispatch);
-    while(server_escuchar(cpu_dispatch_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion));
+    int cpu_dispatch_fd = iniciar_servidor(logger_cpu, puerto_escucha_dispatch, "CPU dispatch");
+    empezar_hilo_servidor(cpu_dispatch_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion, "CPU dispatch", flag_dispatch_encendido);
 
     //Empieza el servidor interrupt
-    int cpu_interrupt_fd = iniciar_servidor(logger_cpu, puerto_escucha_interrupt);
-    while(server_escuchar(cpu_interrupt_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion));
+    int cpu_interrupt_fd = iniciar_servidor(logger_cpu, puerto_escucha_interrupt, "CPU interrupt");
+    empezar_hilo_servidor(cpu_interrupt_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion, "CPU interrupt", flag_interrupt_encendido);
 
     //Se conecta como cliente a la memoria
     int memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);
     
     //TODO: ver como sincronizazr el comienzo de cada server y del cliente.
+
+    while (*flag_dispatch_encendido && *flag_interrupt_encendido);
+    free(flag_dispatch_encendido);
+    free(flag_interrupt_encendido);
 
     liberar_conexion(memoria_fd);
     terminar_programa(logger_cpu, config_cpu);

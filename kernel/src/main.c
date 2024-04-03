@@ -18,8 +18,8 @@ int main(int argc, char* argv[]) {
     get_config(config_kernel);
 
     //Empieza el servidor
-    int kernel_fd = iniciar_servidor(logger_kernel, puerto_escucha);
-    while(server_escuchar(kernel_fd, logger_kernel, (procesar_conexion_func_t)procesar_conexion));
+    int kernel_fd = iniciar_servidor(logger_kernel, puerto_escucha, "kernel");
+    while(server_escuchar(kernel_fd, logger_kernel, (procesar_conexion_func_t)procesar_conexion, "kernel"));
 
     //Se conecta como cliente a la memoria (interrupt)
     int memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
