@@ -84,25 +84,3 @@ int crear_conexion(t_log* logger, const char* nombre_server, char* ip, char* pue
     return socket_cliente;
 }
 
-void while_server_escuchar(void* args_void) {
-    server_hilo_args_t* args = (conexion_args_t*)args_void;
-    t_log* logger = args->logger;
-    int socket_server = args->socket_server;
-    procesar_conexion_func_t procesar_conexion_func = args->procesar_conexion_func;
-    char* nombre_server = args->nombre_server;
-    int* flag = args->flag;
-    free(args);
-    while(*flag = server_escuchar(socket_server, logger, procesar_conexion_func, nombre_server));
-}
-
-void empezar_hilo_servidor(int socket_server, t_log* logger, procesar_conexion_func_t procesar_conexion, char* nombre_server, int* flag) {
-    pthread_t hilo;
-    server_hilo_args_t* args= malloc(sizeof(server_hilo_args_t));
-    args->socket_server = socket_server;
-    args->logger = logger;
-    args->procesar_conexion_func = procesar_conexion;
-    args->nombre_server = nombre_server;
-    args->flag = flag;
-    pthread_create(&hilo, NULL, (void*) while_server_escuchar, args);
-}
-

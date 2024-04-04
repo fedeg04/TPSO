@@ -32,7 +32,5 @@ int esperar_cliente(int socket_servidor, t_log* logger, char* nombre_server);
 int server_escuchar(int socket_server, t_log* logger, procesar_conexion_func_t procesar_conexion_func, char* nombre_server);
 int crear_conexion(t_log* logger, const char* nombre_server, char* ip, char* puerto);
 int generar_conexion(t_log* logger, char* nombre_server, char* ip, char* puerto, t_config* config);
-void empezar_hilo_servidor(int socket_server, t_log* logger, procesar_conexion_func_t procesar_conexion, char* nombre_server, int* flag);
-void while_server_escuchar(void* args_void);
 
 #endif
