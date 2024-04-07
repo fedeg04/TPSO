@@ -3,7 +3,7 @@
 #include <../include/init.h>
 #include <../include/main.h>
 
-t_queue pcbs;
+//t_queue* pcbs = queue_create();
 
 void get_config(t_config* config) {
     puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
 
+    h_consola = pthread_create(&hilo_consola, NULL, (void*) leer_consola, NULL);
     //Se conecta como cliente a la memoria (interrupt)
     int memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
     
@@ -35,6 +36,7 @@ int main(int argc, char* argv[]) {
     int kernel_fd = iniciar_servidor(logger_kernel, puerto_escucha, "kernel");
     while(server_escuchar(kernel_fd, logger_kernel, (procesar_conexion_func_t)procesar_conexion, "kernel"));
 
+    phthread_join(h_consola, NULL);
     terminar_programa(logger_kernel, config_kernel);
     liberar_conexion(memoria_dispatch_fd);
     liberar_conexion(memoria_interrupt_fd);

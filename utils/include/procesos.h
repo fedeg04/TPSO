@@ -2,8 +2,9 @@
 #define PROCESOS_H_
 
 #include <stdint.h>
-typedef struct {
-    uint32_t PC;
+typedef struct
+{
+    uint32_t PC; // no hay info repetida?
     uint8_t AX;
     uint8_t BX;
     uint8_t CX;
@@ -16,12 +17,12 @@ typedef struct {
     uint32_t DI;
 } registros_t;
 
-typedef struct {
+typedef struct
+{
     uint32_t pid;
     uint32_t pc;
     uint32_t quantum;
     registros_t registros;
 } proceso_t;
-
 
 #endif

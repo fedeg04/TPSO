@@ -14,4 +14,5 @@ char* ip_memoria;
 char* puerto_escucha_dispatch;
 char* puerto_escucha_interrupt;
 int servers_escuchar();
+registros_t registros_actuales;
 #endif
