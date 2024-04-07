@@ -3,6 +3,8 @@
 #include <../include/init.h>
 #include <../include/main.h>
 
+t_queue pcbs;
+
 void get_config(t_config* config) {
     puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
     ip_memoria = config_get_string_value(config, "IP_MEMORIA");

@@ -23,4 +23,5 @@ typedef struct {
     registros_t registros;
 } proceso_t;
 
+
 #endif
