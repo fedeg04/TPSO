@@ -26,7 +26,8 @@ typedef enum {
     FINALIZAR_PROCESO,
     DETENER_PLANIFICACION,
     INICIAR_PLANIFICACION,
-    PROCESO_ESTADO 
-} op_code
+    MULTIPROGRAMACION,
+    PROCESO_ESTADO
+} op_code;
 
 #endif

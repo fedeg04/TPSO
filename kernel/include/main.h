@@ -17,6 +17,6 @@ char* ip_cpu;
 char* puerto_cpu_interrupt;
 char* puerto_escucha;
 pthread_t hilo_consola;
-int h_consola;
+
 
 #endif

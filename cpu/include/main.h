@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <../include/init.h>
 #include <../include/conexion.h>
+#include <../include/procesos.h>
 
 char* cpu_dispatch_fd;
 char* cpu_interrupt_fd;
@@ -15,4 +16,5 @@ char* puerto_escucha_dispatch;
 char* puerto_escucha_interrupt;
 int servers_escuchar();
 registros_t registros_actuales;
+
 #endif

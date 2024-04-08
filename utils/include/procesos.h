@@ -2,6 +2,7 @@
 #define PROCESOS_H_
 
 #include <stdint.h>
+
 typedef struct
 {
     uint32_t PC; // no hay info repetida?

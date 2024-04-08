@@ -16,11 +16,13 @@ int main(int argc, char* argv[]) {
     t_config* config_io = iniciar_config("io.config");
     get_config(config_io);
 
+// Se conecta al kernel
+    int kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
+
     //Se conecta a la memoria
     int memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
 
-    // Se conecta al kernel
-    int kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
+    
 
     terminar_programa(logger_io, config_io);
     liberar_conexion(memoria_fd);
