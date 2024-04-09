@@ -14,7 +14,7 @@
 
 typedef void* (*procesar_conexion_func_t)(void*);
 typedef struct {
-    int socket_server;
+    int socket_cliente;
     t_log* logger;
 } conexion_args_t;
 

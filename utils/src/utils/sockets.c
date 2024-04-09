@@ -26,7 +26,7 @@ int server_escuchar(int socket_server, t_log* logger, procesar_conexion_func_t p
         pthread_t hilo;
         conexion_args_t* args = malloc(sizeof(conexion_args_t));
         args->logger = logger;
-        args->socket_server = socket_server;
+        args->socket_cliente = socket_cliente;
         pthread_create(&hilo, NULL, procesar_conexion_func, (void*) args);
         pthread_detach(hilo);
         return 1;

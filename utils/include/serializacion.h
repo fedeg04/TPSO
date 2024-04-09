@@ -1,19 +1,21 @@
-#ifndef CONSOLA_H_
-#define CONSOLA_H_
+#ifndef CONSOLAH
+#define CONSOLAH
 #include <../include/protocolo.h>
+#include <commons/log.h>
+#include <stdint.h>
 
 typedef struct
 {
-    int size;
-    void *stream;
+    uint32_t size;
+    void* stream;
 } t_buffer;
 
 typedef struct
 {
-    op_code codigo_operacion;
-    t_buffer *buffer;
+    op_code op_code;
+    t_buffer* buffer;
 } t_paquete;
 
-void enviar_paquete(op_code op_code, int socket, char* arg1);
+void enviar_paquete(op_code op_code, int socket, char* arg1, t_log* logger);
 
 #endif
