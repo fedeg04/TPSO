@@ -3,9 +3,9 @@
 #include <../include/protocolo.h>
 #include <commons/log.h>
 #include <stdint.h>
+#include <stdlib.h>
 
-typedef struct
-{
+typedef struct {
     uint32_t size;
     void* stream;
 } t_buffer;

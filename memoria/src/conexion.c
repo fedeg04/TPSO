@@ -14,8 +14,14 @@ void procesar_conexion(void* args_void) {
         }
 
         switch(opcode) {
+
             case INICIAR_PROCESO:
                 log_info(logger, "Me llego iniciar proceso");
+                uint32_t size;
+                recv(socket_cliente, &size, sizeof(uint32_t), 0);
+                void* path = malloc(size);
+                recv(socket_cliente, path, size, 0);
+            //TODO: agregar cases
         }
 
     }

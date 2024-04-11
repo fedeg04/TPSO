@@ -36,7 +36,7 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
 
     if(!strcmp(comando, "INICIAR_PROCESO")) {
         char* path = strtok(NULL, " ");
-        enviar_paquete(INICIAR_PROCESO, socket, path);
+        enviar_paquete(INICIAR_PROCESO, socket, path, logger);
     }
     
     //le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
