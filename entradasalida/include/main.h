@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <../include/init.h>
+#include <../include/protocolo.h>
 
 char* puerto_memoria;
 char* puerto_kernel;
