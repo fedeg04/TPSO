@@ -5,5 +5,23 @@ void procesar_conexion(void* args_void) {
     int socket_cliente = args->socket_cliente;
     t_log* logger = args->logger;
     free(args);
+
+    op_code opcode;
+    while (socket_cliente != 1) {
+        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
+            log_info(logger, "Tiro error");
+            return;
+        }
+
+        switch(opcode) {
+            case ENVIAR_PCB:
+            case DATOS_PCB:
+            case GENERICA:
+            case STDIN:
+            case STDOUT:
+            case DIALFS:
+            default:
+        }
+    }
     return;
 }

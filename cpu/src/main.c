@@ -13,8 +13,8 @@ void get_config(t_config *config)
 int servers_escuchar()
 {
     return 
-    server_escuchar(cpu_interrupt_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion, "CPU interrupt") && 
-    server_escuchar(cpu_dispatch_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion, "CPU dispatch");
+    server_escuchar(cpu_interrupt_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion_interrupt, "CPU interrupt") && 
+    server_escuchar(cpu_dispatch_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion_dispatch, "CPU dispatch");
 }
 
 int main(int argc, char *argv[])

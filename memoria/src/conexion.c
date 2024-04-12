@@ -21,11 +21,12 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
                 void* path = malloc(size);
                 recv(socket_cliente, path, size, 0);
-            //TODO: agregar cases
+            case FINALIZAR_PROCESO:
+            case FETCH:
+            case MOV_OUT:
+            case RESIZE:
+            default:
         }
-
     }
-
-
     return;
 }
