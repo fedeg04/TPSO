@@ -12,34 +12,7 @@ void get_config(t_config* config) {
 
 int main(int argc, char* argv[]) {
     t_log* logger_io = iniciar_logger("io.log", "I/O: ");
-  int init;
-  scanf("%d", &init);
-  log_info(logger_io, "%d", init);
-   op_code interfaz;
-    switch(init)
-    {
-        case 1:
-            interfaz = GENERICA;
-            break;
-
-        case 2:
-            interfaz = STDIN;
-            break;
-
-        case 3:
-            interfaz = STDOUT;
-            break;
-
-        case 4:
-            interfaz = DIALFS;
-            break;
-
-        default:
-        log_error(logger_io, "%s", "Interfaz inválida");
-        return;
-
-    }
-    log_info(logger_io, "INTERFAZ: %d", interfaz);
+    log_info(logger_io, "%s", argv[1]); // ./bin/entradasalida "unpath"
     t_config* config_io = iniciar_config("io.config");
     get_config(config_io);
 

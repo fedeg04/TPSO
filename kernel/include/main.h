@@ -18,7 +18,10 @@ char* puerto_cpu_interrupt;
 char* puerto_escucha;
 int quantum;
 char** recursos;
-char** instancias_recursos;
+int* instancias_recursos;
+int cantidad_recursos;
+char* algoritmo_planificacion;
+int grado_multiprogramacion;
 pthread_t hilo_consola;
 
 
