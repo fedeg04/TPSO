@@ -1,6 +1,4 @@
 #include <../include/consola.h>
-#include <readline/readline.h>
-
 
 void empezar_hilo_consola(pthread_t* hilo_consola, t_log* logger, int socket) {
     leer_consola_t* args = malloc(sizeof(leer_consola_t));;
@@ -42,3 +40,12 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
     //le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
 }
 
+void enviar_inicio_proceso(int socket, char* path, t_log* logger) {
+    void* stream = malloc(sizeof(op_code) + string_length(path) + 1);
+    int offset = 0;
+    agregar_opcode(stream, &offset, INICIAR_PROCESO);
+    agregar_string(stream, &offset, path);
+    agregar_uint32_t(stream, &offset, pid_siguiente);
+    send(socket, stream, offset, 0);
+    free(stream);
+}

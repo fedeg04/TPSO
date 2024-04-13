@@ -21,7 +21,10 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
                 void* path = malloc(size);
                 recv(socket_cliente, path, size, 0);
+                uint32_t pid;
+                recv(socket_cliente, &pid, sizeof(uint32_t), 0);
                 log_info(logger, "PATH: %s", path);
+                log_info(logger, "PID: %d", pid);
             case FINALIZAR_PROCESO:
             case FETCH:
             case MOV_OUT:

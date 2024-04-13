@@ -1,6 +1,4 @@
-#include <../include/procesos.h>
-
-int pid_siguiente = 1;
+#include <../include/proceso.h>
 
 /*
 registros_t inicializar_registros()
