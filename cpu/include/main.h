@@ -14,6 +14,8 @@ char* puerto_memoria;
 char* ip_memoria;
 char* puerto_escucha_dispatch;
 char* puerto_escucha_interrupt;
+int cantidad_entradas_tlb;
+char* algoritmo_tlb;
 int servers_escuchar();
 registros_t registros_actuales;
 

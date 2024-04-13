@@ -7,5 +7,9 @@
 #include <../include/conexion.h>
 
 char* puerto_escucha;
+int tam_memoria;
+int tam_pagina;
+char* path_instrucciones;
+int retardo_respuesta;
 
 #endif
