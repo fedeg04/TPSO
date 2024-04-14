@@ -38,8 +38,18 @@ int main(int argc, char* argv[]) {
     t_log* logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
-    t_queue* pcbs_new = queue_create();
-    t_queue* pcbs_ready = queue_create();
+    t_list* pcbs_new = list_create();
+    t_list* pcbs_ready = list_create();
+    t_list* pcbs_exec = list_create();
+    t_list* pcbs_generica = list_create();
+    t_list* pcbs_stdin = list_create();
+    t_list* pcbs_stdout = list_create();
+    t_list* pcbs_dialfs = list_create();
+    t_list* pcbs_recursos[cantidad_recursos] = {0};
+    for(int i = 0; i < cantidad_recursos; i++) 
+    { 
+        pcbs_recursos[i] = list_create();
+    }
 
     //Se conecta como cliente a la memoria (interrupt)
     int memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);

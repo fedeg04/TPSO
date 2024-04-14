@@ -3,6 +3,7 @@
 
 #include <../include/sockets.h>
 #include <../include/protocolo.h>
+#include <../include/registros.h>
 
 void procesar_conexion_interrupt(void* args);
 void procesar_conexion_dispatch(void* args);

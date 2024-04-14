@@ -28,6 +28,9 @@ void procesar_conexion_dispatch(void* args_void) {
     t_log* logger = args->logger;
     free(args);
 
+    uint32_t pidA = 1;
+    enviar_pid_pc(pidA, registros_cpu->PC, socket_cliente);
+
     op_code opcode;
     while (socket_cliente != 1) {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
@@ -37,6 +40,7 @@ void procesar_conexion_dispatch(void* args_void) {
 
         switch(opcode) {
             case ENVIAR_PCB:
+                //Se recibe el PCB y se ejecuta el proceso
             case SET:
             case MOV_IN:
             case MOV_OUT:
@@ -65,4 +69,14 @@ void procesar_conexion_dispatch(void* args_void) {
         }
     }
     return;
+}
+
+void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
+    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(op_code));
+    int offset = 0;
+    agregar_opcode(stream, &offset, FETCH);
+    agregar_uint32_t(stream, &offset, pid);
+    agregar_uint32_t(stream, &offset, pc);
+    send(socket, stream, offset, 0);
+    free(stream);
 }

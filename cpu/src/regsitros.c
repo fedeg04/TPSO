@@ -1,6 +1,6 @@
-#include <../include/procesos.h>
+#include <../include/registros.h>
 
-registros_t* inicializar_registros() {
+registros_t* iniciar_registros() {
     registros_t* registros = malloc(sizeof(registros_t));
     registros->AX  = 0;
     registros->BX  = 0;

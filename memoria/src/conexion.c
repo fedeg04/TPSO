@@ -7,6 +7,7 @@ void procesar_conexion(void* args_void) {
     t_log* logger = args->logger;
     free(args);
 
+    t_list* archivos_procesos = list_create(); //Lista de archivos con PID
     op_code opcode;
     while (socket_cliente != 1) {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
@@ -24,16 +25,22 @@ void procesar_conexion(void* args_void) {
                 uint32_t pid;
                 recv(socket_cliente, &pid, sizeof(uint32_t), 0);
                 if(existe_archivo(path)) {
-                    archivo_proceso_t* archivo = malloc(sizeof(archivo_proceso_t));
-                    archivo->f = fopen(path, "r");
-                    archivo->pid = pid;
-                    enviar_pid(socket_cliente, archivo->pid);
-                    free(archivo);
+                    archivo_proceso_t* archivo_proceso = malloc(sizeof(archivo_proceso_t));
+                    archivo_proceso->f = fopen(path, "r");
+                    archivo_proceso->pid = pid;
+                    agregar_proceso(archivo_proceso, archivos_procesos);
+                    enviar_pid(socket_cliente, archivo_proceso->pid);
+                    free(archivo_proceso);
                 } else {
                     enviar_pid(socket_cliente, 0);
                 }
             case FINALIZAR_PROCESO:
             case FETCH:
+                uint32_t pid_a_buscar; 
+                recv(socket_cliente, &pid_a_buscar, sizeof(uint32_t), 0);
+                uint32_t pc;
+                recv(socket_cliente, &pc, sizeof(uint32_t), 0);
+                log_info(logger, "PID: %d\n PC: %d", pid_a_buscar, pc);
             case MOV_OUT:
             case RESIZE:
             default:

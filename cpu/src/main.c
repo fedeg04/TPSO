@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
     t_config *config_cpu = iniciar_config("cpu.config");
     get_config(config_cpu);
 
+    registros_cpu = iniciar_registros();
+
     // Se conecta como cliente a la memoria
     int memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);
     
