@@ -22,7 +22,7 @@ typedef struct
 {
     uint32_t pid;
     uint32_t quantum;
-    registros_t registros;
+    registros_t* registros;
 } proceso_t;
 
 registros_t* inicializar_registros();

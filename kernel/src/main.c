@@ -38,14 +38,14 @@ int main(int argc, char* argv[]) {
     t_log* logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
-    t_list* pcbs_new = list_create();
-    t_list* pcbs_ready = list_create();
-    t_list* pcbs_exec = list_create();
-    t_list* pcbs_generica = list_create();
-    t_list* pcbs_stdin = list_create();
-    t_list* pcbs_stdout = list_create();
-    t_list* pcbs_dialfs = list_create();
-    t_list* pcbs_recursos[cantidad_recursos] = {0};
+    pcbs_new = list_create();
+    pcbs_ready = list_create();
+    pcbs_exec = list_create();
+    pcbs_generica = list_create();
+    pcbs_stdin = list_create();
+    pcbs_stdout = list_create();
+    pcbs_dialfs = list_create();
+    t_list* pcbs_recursos[cantidad_recursos];
     for(int i = 0; i < cantidad_recursos; i++) 
     { 
         pcbs_recursos[i] = list_create();

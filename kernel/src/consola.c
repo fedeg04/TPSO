@@ -40,8 +40,8 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
         log_info(logger, "PID: %d", pid);
         if(pid != 0)
         {
-        t_proceso* proceso = crear_pcb(pid);
-        planificar_nuevo_proceso(proceso);
+        proceso_t* proceso = crear_pcb(pid);
+        planificar_nuevo_proceso(proceso, logger);
         }
 
     }
