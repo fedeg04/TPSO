@@ -5,7 +5,6 @@
 #include <pthread.h>
 #include <../include/serializacion.h>
 #include <readline/readline.h>
-#include <../include/proceso.h>
 
 typedef struct {
     op_code opcode;
@@ -17,6 +16,7 @@ typedef struct {
     int socket;
 } leer_consola_t;
 
+uint32_t pid_siguiente = 1;
 void leer_consola(void* args_void);
 void procesar_instruccion(char* instruccion, t_log* logger, int socket);
 void empezar_hilo_consola(pthread_t* hilo_consola, t_log* logger,int socket);
