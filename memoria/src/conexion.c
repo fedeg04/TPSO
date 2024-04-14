@@ -1,5 +1,6 @@
 #include <../include/conexion.h>
 
+
 void procesar_conexion(void* args_void) {
     conexion_args_t* args = (conexion_args_t*) args_void;
     int socket_cliente = args->socket_cliente;
@@ -16,15 +17,21 @@ void procesar_conexion(void* args_void) {
         switch(opcode) {
 
             case INICIAR_PROCESO:
-                log_info(logger, "Me llego iniciar proceso");
                 uint32_t size;
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
-                void* path = malloc(size);
+                char* path = malloc(size);
                 recv(socket_cliente, path, size, 0);
                 uint32_t pid;
                 recv(socket_cliente, &pid, sizeof(uint32_t), 0);
-                log_info(logger, "PATH: %s", path);
-                log_info(logger, "PID: %d", pid);
+                if(existe_archivo(path)) {
+                    archivo_proceso_t* archivo = malloc(sizeof(archivo_proceso_t));
+                    archivo->f = fopen(path, "r");
+                    archivo->pid = pid;
+                    enviar_pid(socket_cliente, archivo->pid);
+                    free(archivo);
+                } else {
+                    enviar_pid(socket_cliente, 0);
+                }
             case FINALIZAR_PROCESO:
             case FETCH:
             case MOV_OUT:
@@ -38,4 +45,12 @@ void procesar_conexion(void* args_void) {
         }
     }
     return;
+}
+
+void enviar_pid(int socket_cliente, uint32_t pid) {
+    void* stream = malloc(sizeof(uint32_t));
+    int offset = 0;
+    agregar_uint32_t(stream, &offset, pid);
+    send(socket_cliente, stream, sizeof(uint32_t), 0);
+    free(stream);
 }
