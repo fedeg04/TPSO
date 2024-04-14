@@ -30,7 +30,8 @@ typedef enum {
     ENVIAR_PCB,
     INTERRUMPIR,
     FETCH,
-    DATOS_PCB
+    DATOS_PCB,
+    MSG
 } op_code;
 
 #endif

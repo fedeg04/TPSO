@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <../include/init.h>
 #include <../include/protocolo.h>
+#include <../include/serializacion.h>
 
 char* tipo_interfaz;
 int tiempo_unidad_trabajo;

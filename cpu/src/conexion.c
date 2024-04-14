@@ -16,6 +16,7 @@ void procesar_conexion_interrupt(void* args_void) {
         switch(opcode) {
             case INTERRUMPIR:
             default:
+               
         }
     }
     return;
@@ -56,6 +57,11 @@ void procesar_conexion_dispatch(void* args_void) {
             case IO_FS_READ:
             case EXIT:
             default:
+                uint32_t size_msg;
+                recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
+                void* msg = malloc(size_msg);
+                recv(socket_cliente, msg, size_msg, 0);
+                log_info(logger, "%s", msg);
         }
     }
     return;

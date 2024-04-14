@@ -21,6 +21,11 @@ void procesar_conexion(void* args_void) {
             case STDOUT:
             case DIALFS:
             default:
+                uint32_t size_msg;
+                recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
+                void* msg = malloc(size_msg);
+                recv(socket_cliente, msg, size_msg, 0);
+                log_info(logger, "%s", msg);
         }
     }
     return;
