@@ -11,6 +11,8 @@ int main(int argc, char* argv[]) {
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
     inicializar_listas();
+    pid_siguiente = 1;
+    procesos_activos = 0;
 
     //Se conecta como cliente a la memoria (interrupt)
     int memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
@@ -27,7 +29,7 @@ int main(int argc, char* argv[]) {
     empezar_hilo_consola(&hilo_consola, logger_kernel, memoria_dispatch_fd);
 
     //Se conecta como cliente al CPU dispatch
-    int cpu_dispatch_fd = generar_conexion(logger_kernel, "CPU dispatch", ip_cpu, puerto_cpu_dispatch, config_kernel);
+    cpu_dispatch_fd = generar_conexion(logger_kernel, "CPU dispatch", ip_cpu, puerto_cpu_dispatch, config_kernel);
     char* msgCPU = "Kernel en CPU";
     void* streamCPU = malloc(sizeof(uint32_t) + strlen(msgCPU) + 1);
     int offsetCPU = 0;

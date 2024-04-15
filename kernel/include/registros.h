@@ -2,31 +2,34 @@
 #define REGISTROS_H_
 #include <commons/collections/list.h>
 #include <commons/config.h>
-#include <stdlib.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
-char* puerto_memoria;
-char* ip_memoria;
-char* puerto_cpu_dispatch;
-char* ip_cpu;
-char* puerto_cpu_interrupt;
-char* puerto_escucha;
-pthread_t hilo_consola;
-int quantum;
-char** recursos;
-int* instancias_recursos;
-int cantidad_recursos;
-char* algoritmo_planificacion;
-int grado_multiprogramacion;
-t_list* pcbs_new;
-t_list* pcbs_ready;
-t_list* pcbs_exec;
-t_list* pcbs_generica;
-t_list* pcbs_stdin;
-t_list* pcbs_stdout;
-t_list* pcbs_dialfs;
+extern char* puerto_memoria;
+extern char* ip_memoria;
+extern char* puerto_cpu_dispatch;
+extern char* ip_cpu;
+extern char* puerto_cpu_interrupt;
+extern char* puerto_escucha;
+extern pthread_t hilo_consola;
+extern int quantum;
+extern char** recursos;
+extern int* instancias_recursos;
+extern int cantidad_recursos;
+extern char* algoritmo_planificacion;
+extern int grado_multiprogramacion;
+extern t_list* pcbs_new;
+extern t_list* pcbs_ready;
+extern t_list* pcbs_exec;
+extern t_list* pcbs_generica;
+extern t_list* pcbs_stdin;
+extern t_list* pcbs_stdout;
+extern t_list* pcbs_dialfs;
+extern int procesos_activos;
+extern uint32_t pid_siguiente;
+extern int cpu_dispatch_fd;
 void inicializar_listas();
 void get_config(t_config* config); 
 int cantidadDeRecursos(char** instancias_string);

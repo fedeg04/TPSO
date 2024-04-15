@@ -8,7 +8,7 @@
 #include <../include/proceso.h>
 
 
-uint32_t pid_siguiente = 1;
+
 typedef struct {
     op_code opcode;
     char* path;

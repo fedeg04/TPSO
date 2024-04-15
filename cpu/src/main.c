@@ -25,17 +25,10 @@ int main(int argc, char *argv[])
     t_config *config_cpu = iniciar_config("cpu.config");
     get_config(config_cpu);
 
-    registros_cpu = iniciar_registros();
+    registros_cpu = inicializar_registros();
 
     // Se conecta como cliente a la memoria
     int memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);
-    
-    char* msg = "CPU en memoria";
-    void* stream = malloc(sizeof(uint32_t) + strlen(msg) + 1);
-    uint32_t offset = 0;
-    agregar_opcode(stream, &offset, MSG);
-    agregar_string(stream, &offset, msg);
-    send(memoria_fd, stream, offset, 0);
 
     // Empieza el servidor dispatch
     cpu_dispatch_fd = iniciar_servidor(logger_cpu, puerto_escucha_dispatch, "CPU dispatch");

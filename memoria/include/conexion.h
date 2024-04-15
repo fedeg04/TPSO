@@ -7,5 +7,6 @@
 
 void procesar_conexion(void* args);
 void enviar_pid(int socket_cliente, uint32_t pid);
+void enviar_instruccion(int socket, char* instruccion);
 
 #endif

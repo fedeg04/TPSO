@@ -38,12 +38,10 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
         uint32_t pid;
         recv(socket, &pid, sizeof(uint32_t), 0);
         log_info(logger, "PID: %d", pid);
-        if(pid != 0)
-        {
-        proceso_t* proceso = crear_pcb(pid);
-        planificar_nuevo_proceso(proceso, logger);
+        if(pid != 0) {
+            proceso_t* proceso = crear_pcb(pid);
+            planificar_nuevo_proceso(proceso, logger);
         }
-
     }
     
     //le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
