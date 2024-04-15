@@ -42,34 +42,55 @@ void procesar_conexion_dispatch(void* args_void) {
                 proceso_t* pcb = malloc(sizeof(proceso_t));
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb);
-                enviar_pid_pc(pcb->pid, pcb->registros->PC, socket_cliente);
+                enviar_pid_pc(pcb->pid, pcb->registros->PC, memoria_fd);
                 log_info(logger, "PC: %d", pcb->registros->PC);
                 log_info(logger, "Pid: %d", pcb->pid);
+                break;
             case SET:
+            break;
             case MOV_IN:
+            break;
             case MOV_OUT:
+            break;
             case SUM:
+            break;
             case SUB:
+            break;
             case JNZ:
+            break;
             case RESIZE:
+            break;
             case COPY_STRING:
+            break;
             case WAIT:
+            break;
             case SIGNAL:
+            break;
             case IO_GEN_SLEEP:
+            break;
             case IO_STDIN_READ:
+            break;
             case IO_STDOUT_WRITE:
+            break;
             case IO_FS_CREATE:
+            break;
             case IO_FS_DELETE:
+            break;
             case IO_FS_TRUNCATE:
+            break;
             case IO_FS_WRITE:
+            break;
             case IO_FS_READ:
+            break;
             case EXIT:
+            break;
             default:
                 uint32_t size_msg;
                 recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
                 void* msg = malloc(size_msg);
                 recv(socket_cliente, msg, size_msg, 0);
                 log_info(logger, "%s", msg);
+                break;
         }
     }
     return;

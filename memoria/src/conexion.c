@@ -46,7 +46,9 @@ void procesar_conexion(void* args_void) {
                 } else {
                     enviar_pid(socket_cliente, 0);
                 }
+                break;
             case FINALIZAR_PROCESO:
+            break;
             case FETCH:
                 uint32_t pid_a_buscar; 
                 log_info(logger, "Socket: %d\n", socket_cliente);
@@ -57,14 +59,18 @@ void procesar_conexion(void* args_void) {
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
                 //enviar_instruccion(socket_cliente, instruccion);
                 log_info(logger, "Instruccion: %s", instruccion);
+                break;
             case MOV_OUT:
+            break;
             case RESIZE:
+            break;
             default:
                 uint32_t size_msg;
                 recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
                 void* msg = malloc(size_msg);
                 recv(socket_cliente, msg, size_msg, 0);
                 log_info(logger, "%s", msg);
+                break;
         }
     }
 

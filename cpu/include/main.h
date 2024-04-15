@@ -7,9 +7,10 @@
 #include <../include/conexion.h>
 #include <../include/serializacion.h>
 
-char* cpu_dispatch_fd;
-char* cpu_interrupt_fd;
-char* logger_cpu;
+int cpu_dispatch_fd;
+int cpu_interrupt_fd;
+t_log* logger_cpu;
+int memoria_fd;
 char* puerto_memoria;
 char* ip_memoria;
 char* puerto_escucha_dispatch;
