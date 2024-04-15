@@ -1,5 +1,5 @@
-#ifndef CONSOLAH
-#define CONSOLAH
+#ifndef SERIALIZACION_H_
+#define SERIALIZACION_H_
 #include <../include/protocolo.h>
 #include <commons/log.h>
 #include <stdint.h>

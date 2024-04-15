@@ -6,7 +6,7 @@
 #include <readline/readline.h>
 #include <commons/string.h>
 #include <../include/proceso.h>
-#include <../include/planificador.h>
+
 
 uint32_t pid_siguiente = 1;
 typedef struct {
