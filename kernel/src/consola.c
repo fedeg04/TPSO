@@ -31,8 +31,14 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
     
     char* comando = strtok(instruccion, " ");
     log_info(logger, comando);
-
-    if(!strcmp(comando, "INICIAR_PROCESO")) {
+    if(!strcmp(comando, "EJECUTAR_SCRIPT"))
+    {
+        char* path = strtok(NULL, " ");
+            if(existe_archivo(path)) {
+                ejecutar_script(path, logger, socket);
+            }
+    }
+    else if(!strcmp(comando, "INICIAR_PROCESO")) {
         char* path = strtok(NULL, " ");
         enviar_inicio_proceso(socket, path, logger);
         uint32_t pid;
@@ -42,6 +48,26 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
             proceso_t* proceso = crear_pcb(pid);
             planificar_nuevo_proceso(proceso, logger);
         }
+    }
+    else if(!strcmp(comando, "FINALIZAR_PROCESO"))
+    {
+
+    }
+    else if(!strcmp(comando, "DETENER_PLANIFICACION"))
+    {
+
+    }
+    else if(!strcmp(comando, "INICIAR_PLANIFICACION"))
+    {
+
+    }
+    else if(!strcmp(comando, "MULTIPROGRAMACION"))
+    {
+
+    }
+    else if(!strcmp(comando, "PROCESO_ESTADO"))
+    {
+
     }
     
     //le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
@@ -54,5 +80,23 @@ void enviar_inicio_proceso(int socket, char* path, t_log* logger) {
     agregar_string(stream, &offset, path);
     agregar_uint32_t(stream, &offset, pid_siguiente);
     send(socket, stream, offset, 0);
+    pid_siguiente++;
     free(stream);
+}
+
+void ejecutar_script(char* path, t_log* logger, int socket) {
+    FILE *f = fopen(path, "r");
+    char* linea;
+    size_t longitud = 0;
+    ssize_t leidos;
+    fseek(f, 0, SEEK_SET);
+    while((leidos = getline(&linea, &longitud, f)) != -1){
+        procesar_instruccion(linea, logger, socket);
+    }
+
+    fclose(f);
+}
+
+bool existe_archivo(char* path) {
+    return fopen(path, "r") != NULL;
 }

@@ -6,6 +6,8 @@
 #include <readline/readline.h>
 #include <commons/string.h>
 #include <../include/proceso.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 
 
@@ -23,5 +25,7 @@ void leer_consola(void* args_void);
 void procesar_instruccion(char* instruccion, t_log* logger, int socket);
 void empezar_hilo_consola(pthread_t* hilo_consola, t_log* logger,int socket);
 void enviar_inicio_proceso(int socket, char* path, t_log* logger);
+void ejecutar_script(char* path, t_log* logger, int socket);
+bool existe_archivo(char* path);
 
 #endif
