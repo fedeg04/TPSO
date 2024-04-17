@@ -131,6 +131,7 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
             case IO_GEN_SLEEP:
                 char* interfaz = strtok(NULL, " ");
                 uint32_t uni_de_trabajo = atoi(strtok(NULL, " "));
+                
                 break;
             case IO_STDIN_READ:
                 char* interfaz = strtok(NULL, " ");
@@ -155,6 +156,18 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
                 char* nombre_archivo = strtok(NULL, " ");
                 uint32_t registro_tamanio = atoi(strtok(NULL, " "));
                 break;
+            case IO_FS_WRITE:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                uint32_t registro_direccion = atoi(strtok(NULL, " "));
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                // TODO: registro puntero archivo
+            case IO_FS_READ:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                uint32_t registro_direccion = atoi(strtok(NULL, " "));
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                // TODO: registro puntero archivo
             case WAIT:
                 char* recurso = strtok(NULL, " ");
                 break;
