@@ -30,7 +30,6 @@ void procesar_conexion_dispatch(void* args_void) {
 
     op_code opcode;
     while (socket_cliente != 1) {
-        log_info(logger, "OpCode: %d", opcode);
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
             log_info(logger, "Tiro error");
             return;
@@ -43,8 +42,10 @@ void procesar_conexion_dispatch(void* args_void) {
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb);
                 enviar_pid_pc(pcb->pid, pcb->registros->PC, memoria_fd);
-                log_info(logger, "PC: %d", pcb->registros->PC);
-                log_info(logger, "Pid: %d", pcb->pid);
+                char* instruccion = recibir_instruccion(memoria_fd);
+
+                //ejecutar_instruccion(instruccion);
+                log_info(logger, "Instruccion: %s", instruccion);
                 break;
             case SET:
             break;
@@ -145,4 +146,12 @@ void recibir_pcb(int socket, proceso_t* pcb) {
     pcb->registros->EDX = EDX;
     pcb->registros->SI = SI;
     pcb->registros->SI = DI;
+}
+
+char* recibir_instruccion(int socket) {
+    uint32_t size;
+    recv(socket, &size, sizeof(uint32_t), 0);
+    char* instruccion = malloc(size);
+    recv(socket, instruccion, size, 0);
+    return instruccion;
 }
