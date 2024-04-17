@@ -1,4 +1,3 @@
-INICIAR_PROCESO AAA
-INICIAR_PROCESO AAAA
-INICIAR_PROCESO procesos/proceso.txt
+INICIAR_PROCESO procesos/proceso1.txt
+INICIAR_PROCESO procesos/proceso2.txt
 INICIAR_PROCESO procesos/proceso2.txt

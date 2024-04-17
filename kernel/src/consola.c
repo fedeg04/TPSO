@@ -19,6 +19,7 @@ void leer_consola(void* args_void)
        if (!strcmp(leido, "")) {
            break;
        }
+       pthread_t hilo_procesar_instruccion;
        procesar_instruccion_t* args_procesar_instruccion = malloc(sizeof(procesar_instruccion_t));
        args_procesar_instruccion->leido = leido;
        args_procesar_instruccion->logger = logger;
@@ -102,7 +103,11 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
     ssize_t leidos;
     fseek(f, 0, SEEK_SET);
     while((leidos = getline(&linea, &longitud, f)) != -1){
-        
+
+        if (linea[leidos - 1] == '\n') {
+            linea[leidos - 1] = '\0';
+        }
+        log_info(logger, "LINEA: %s", linea);
         procesar_instruccion_t* args_procesar_instruccion = malloc(sizeof(procesar_instruccion_t));
         args_procesar_instruccion->leido = linea;
         args_procesar_instruccion->logger = logger;

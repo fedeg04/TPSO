@@ -11,6 +11,7 @@
 
 
 
+
 typedef struct {
     op_code opcode;
     char* path;
@@ -27,12 +28,13 @@ typedef struct {
     char *leido;
 } procesar_instruccion_t;
 
+//pthread_t hilo_procesar_instruccion;
 void leer_consola(void* args_void);
 void procesar_instruccion(void* args_void);
 void empezar_hilo_consola(pthread_t* hilo_consola, t_log* logger,int socket);
 void enviar_inicio_proceso(int socket, char* path, t_log* logger);
 void ejecutar_script(char* path, t_log* logger, int socket);
 bool existe_archivo(char* path);
-extern pthread_t hilo_procesar_instruccion;
+
 
 #endif
