@@ -41,6 +41,7 @@ void procesar_instruccion(void* args_void) {
     t_log* logger = args->logger;
     int socket = args->socket;
     char* instruccion = args->leido;
+    free(args);
     log_info(logger, "INSTRUCCION: %s", instruccion);
     char* comando = strtok(instruccion, " ");
     log_info(logger, "Comando: %s", comando);
@@ -62,7 +63,7 @@ void procesar_instruccion(void* args_void) {
             proceso_t* proceso = crear_pcb(pid);
             planificar_nuevo_proceso(proceso, logger);
         }
-    }
+        }
     else if(!strcmp(comando, "FINALIZAR_PROCESO"))
     {
 
@@ -105,7 +106,7 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
     size_t longitud = 0;
     ssize_t leidos;
     fseek(f, 0, SEEK_SET);
-    while((leidos = getline(&linea, &longitud, f)) != -1){
+    while((leidos = getline(&linea, &longitud, f)) != 1){
 
         if (linea[leidos - 1] == '\n') {
             linea[leidos - 1] = '\0';
