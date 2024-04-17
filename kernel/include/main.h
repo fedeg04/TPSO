@@ -16,6 +16,7 @@ char* ip_cpu;
 char* puerto_cpu_interrupt;
 char* puerto_escucha;
 pthread_t hilo_consola;
+pthread_t hilo_procesar_instruccion;
 int quantum;
 char** recursos;
 int* instancias_recursos;

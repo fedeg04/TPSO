@@ -19,18 +19,28 @@ void leer_consola(void* args_void)
        if (!strcmp(leido, "")) {
            break;
        }
-       procesar_instruccion(leido, logger, socket);
-       free(leido);
+       procesar_instruccion_t* args_procesar_instruccion = malloc(sizeof(procesar_instruccion_t));
+       args_procesar_instruccion->leido = leido;
+       args_procesar_instruccion->logger = logger;
+       args_procesar_instruccion->socket = socket;
+       pthread_create(&hilo_procesar_instruccion, NULL, (void*) procesar_instruccion, (void*) args_procesar_instruccion);
+       //procesar_instruccion(leido, logger, socket);
+       //free(leido);
+       //free(args_procesar_instruccion);
    }
    free(leido);
 }
 
-void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
+void procesar_instruccion(void* args_void) {
 
     //INICIAR_PROCESO DOCUMENTOS/prueba.txt
     
+    procesar_instruccion_t* args = (procesar_instruccion_t*) args_void;
+    t_log* logger = args->logger;
+    int socket = args->socket;
+    char* instruccion = args->leido;
     char* comando = strtok(instruccion, " ");
-    log_info(logger, comando);
+    log_info(logger, "Comando: %s", comando);
     if(!strcmp(comando, "EJECUTAR_SCRIPT"))
     {
         char* path = strtok(NULL, " ");
@@ -39,6 +49,7 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
             }
     }
     else if(!strcmp(comando, "INICIAR_PROCESO")) {
+        
         char* path = strtok(NULL, " ");
         enviar_inicio_proceso(socket, path, logger);
         uint32_t pid;
@@ -91,7 +102,13 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
     ssize_t leidos;
     fseek(f, 0, SEEK_SET);
     while((leidos = getline(&linea, &longitud, f)) != -1){
-        procesar_instruccion(linea, logger, socket);
+        
+        procesar_instruccion_t* args_procesar_instruccion = malloc(sizeof(procesar_instruccion_t));
+        args_procesar_instruccion->leido = linea;
+        args_procesar_instruccion->logger = logger;
+        args_procesar_instruccion->socket = socket;
+
+        procesar_instruccion(args_procesar_instruccion);
     }
 
     fclose(f);

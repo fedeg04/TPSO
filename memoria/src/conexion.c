@@ -30,7 +30,6 @@ void procesar_conexion(void* args_void) {
         switch(opcode) {
 
             case INICIAR_PROCESO:
-                log_info(logger, "Socket: %d\n", socket_cliente);
                 uint32_t size;
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
                 char* path = malloc(size);
@@ -51,11 +50,9 @@ void procesar_conexion(void* args_void) {
             break;
             case FETCH:
                 uint32_t pid_a_buscar; 
-                log_info(logger, "Socket: %d\n", socket_cliente);
                 recv(socket_cliente, &pid_a_buscar, sizeof(uint32_t), 0);
                 uint32_t pc;
                 recv(socket_cliente, &pc, sizeof(uint32_t), 0);
-                log_info(logger, "PC: %d", pc);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
                 //enviar_instruccion(socket_cliente, instruccion);
                 log_info(logger, "Instruccion: %s", instruccion);
