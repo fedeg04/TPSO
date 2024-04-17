@@ -25,6 +25,7 @@ void leer_consola(void* args_void)
        args_procesar_instruccion->logger = logger;
        args_procesar_instruccion->socket = socket;
        pthread_create(&hilo_procesar_instruccion, NULL, (void*) procesar_instruccion, (void*) args_procesar_instruccion);
+       pthread_detach(hilo_procesar_instruccion);
        //procesar_instruccion(leido, logger, socket);
        //free(leido);
        //free(args_procesar_instruccion);
@@ -34,12 +35,13 @@ void leer_consola(void* args_void)
 
 void procesar_instruccion(void* args_void) {
 
-    //INICIAR_PROCESO DOCUMENTOS/prueba.txt
+
     
     procesar_instruccion_t* args = (procesar_instruccion_t*) args_void;
     t_log* logger = args->logger;
     int socket = args->socket;
     char* instruccion = args->leido;
+    log_info(logger, "INSTRUCCION: %s", instruccion);
     char* comando = strtok(instruccion, " ");
     log_info(logger, "Comando: %s", comando);
     if(!strcmp(comando, "EJECUTAR_SCRIPT"))
@@ -86,6 +88,7 @@ void procesar_instruccion(void* args_void) {
 }
 
 void enviar_inicio_proceso(int socket, char* path, t_log* logger) {
+    log_info(logger, "PATH: %s", path);
     void* stream = malloc(sizeof(op_code) + string_length(path) + 1);
     int offset = 0;
     agregar_opcode(stream, &offset, INICIAR_PROCESO);
@@ -112,8 +115,9 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
         args_procesar_instruccion->leido = linea;
         args_procesar_instruccion->logger = logger;
         args_procesar_instruccion->socket = socket;
-
-        procesar_instruccion(args_procesar_instruccion);
+        pthread_t hilo_procesar_instruccion;
+        pthread_create(&hilo_procesar_instruccion, NULL, (void*) procesar_instruccion, (void*) args_procesar_instruccion);
+        pthread_detach(hilo_procesar_instruccion);
     }
 
     fclose(f);
