@@ -31,7 +31,7 @@ void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     {
         enviar_proceso_a_cpu_con_timer(proceso);
     }
-    esperar_contexto_de_ejecucion(proceso);
+    esperar_contexto_de_ejecucion(proceso, logger);
 }
 
 void enviar_proceso_a_cpu(proceso_t* proceso)
@@ -77,7 +77,7 @@ void enviar_proceso_a_cpu_con_timer(proceso_t* proceso) {
 
 }
 
-void esperar_contexto_de_ejecucion(proceso_t* proceso)
+void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
 {
     uint32_t pid;
     uint32_t quantum;
@@ -92,6 +92,9 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso)
     uint32_t EDX;
     uint32_t SI;
     uint32_t DI;
+    uint32_t size_motivo;
+    char* motivo_de_desalojo;
+
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &PC, sizeof(uint32_t), 0);
@@ -104,5 +107,77 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso)
     recv(cpu_dispatch_fd, &ECX, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &EDX, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &SI, sizeof(uint32_t), 0);
-    recv(cpu_dispatch_fd, &DI, sizeof(uint32_t), 0);  
+    recv(cpu_dispatch_fd, &DI, sizeof(uint32_t), 0);
+    recv(cpu_dispatch_fd, &size_motivo, sizeof(uint32_t), 0);
+    motivo_de_desalojo = malloc(size_motivo);
+    recv(cpu_dispatch_fd, motivo_de_desalojo, size_motivo, 0);  
+
+    proceso->registros->PC = PC;
+    proceso->registros->AX = AX;
+    proceso->registros->BX = BX;
+    proceso->registros->CX = CX;
+    proceso->registros->DX = DX;
+    proceso->registros->EAX = EAX;
+    proceso->registros->EBX = EBX;
+    proceso->registros->ECX = ECX;
+    proceso->registros->EDX = EDX;
+    proceso->registros->SI = SI;
+    proceso->registros->DI = DI;
+
+    char* instruccion_de_motivo_string = strtok(motivo_de_desalojo, " ");
+    op_code instruccion_de_motivo = string_to_opcode(motivo_de_desalojo);
+
+    switch(instruccion_de_motivo){
+            case IO_GEN_SLEEP:
+                char* interfaz = strtok(NULL, " ");
+                uint32_t uni_de_trabajo = atoi(strtok(NULL, " "));
+                
+                break;
+            case IO_STDIN_READ:
+                char* interfaz = strtok(NULL, " ");
+                uint32_t registro_direccion = atoi(strtok(NULL, " "));
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                break;
+            case IO_STDOUT_WRITE:
+                char* interfaz = strtok(NULL, " ");
+                uint32_t registro_direccion = atoi(strtok(NULL, " "));
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                break;
+            case IO_FS_CREATE:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                break;
+            case IO_FS_DELETE:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                break;
+            case IO_FS_DELETE:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                break;
+            case IO_FS_WRITE:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                uint32_t registro_direccion = atoi(strtok(NULL, " "));
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                // TODO: registro puntero archivo
+            case IO_FS_READ:
+                char* interfaz = strtok(NULL, " ");
+                char* nombre_archivo = strtok(NULL, " ");
+                uint32_t registro_direccion = atoi(strtok(NULL, " "));
+                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                // TODO: registro puntero archivo
+            case WAIT:
+                char* recurso = strtok(NULL, " ");
+                break;
+            case SIGNAL:
+                char* recurso = strtok(NULL, " ");
+                break;
+            case EXIT:
+            break;
+            //case TIMER:
+            default:
+    }
+
 }
