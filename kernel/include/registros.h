@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <../include/procesos.h>
 
 extern char* puerto_memoria;
 extern char* ip_memoria;
@@ -30,6 +31,7 @@ extern t_list* pcbs_dialfs;
 extern int procesos_activos;
 extern uint32_t pid_siguiente;
 extern int cpu_dispatch_fd;
+extern void enviar_proceso_io_gen_sleep(proceso_t* proceso,char* interfaz_sleep, uint32_t uni_de_trabajo);
 void inicializar_listas();
 void get_config(t_config* config); 
 int cantidadDeRecursos(char** instancias_string);
