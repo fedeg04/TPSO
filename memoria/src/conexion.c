@@ -56,8 +56,8 @@ void procesar_conexion(void* args_void) {
                 uint32_t pc;
                 recv(socket_cliente, &pc, sizeof(uint32_t), 0);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
-                enviar_instruccion(socket_cliente, instruccion);
                 log_info(logger, "Instruccion: %s", instruccion);
+                enviar_instruccion(socket_cliente, instruccion);                            
                 break;
             case MOV_OUT:
             break;
@@ -85,10 +85,8 @@ void enviar_pid(int socket_cliente, uint32_t pid) {
 }
 
 void enviar_instruccion(int socket, char* instruccion) {
-    uint32_t size = string_length(instruccion) + 1;
-    void* stream = malloc(sizeof(uint32_t) + size);
+    void* stream = malloc(sizeof(uint32_t) + string_length(instruccion) + 1);
     int offset = 0;
-    agregar_uint32_t(stream, &offset, size);
     agregar_string(stream, &offset, instruccion);
     send(socket, stream, offset, 0);
     free(stream);

@@ -41,50 +41,13 @@ void procesar_conexion_dispatch(void* args_void) {
                 proceso_t* pcb = malloc(sizeof(proceso_t));
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb);
-                enviar_pid_pc(pcb->pid, pcb->registros->PC, memoria_fd);
-                char* instruccion = recibir_instruccion(memoria_fd);
+                registros_cpu = pcb->registros;
+                enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
 
-                //ejecutar_instruccion(instruccion);
-                log_info(logger, "Instruccion: %s", instruccion);
+                char* instruccion = recibir_instruccion(memoria_fd);
+                
+                ejecutar_instruccion(instruccion, logger);
                 break;
-            case SET:
-            break;
-            case MOV_IN:
-            break;
-            case MOV_OUT:
-            break;
-            case SUM:
-            break;
-            case SUB:
-            break;
-            case JNZ:
-            break;
-            case RESIZE:
-            break;
-            case COPY_STRING:
-            break;
-            case WAIT:
-            break;
-            case SIGNAL:
-            break;
-            case IO_GEN_SLEEP:
-            break;
-            case IO_STDIN_READ:
-            break;
-            case IO_STDOUT_WRITE:
-            break;
-            case IO_FS_CREATE:
-            break;
-            case IO_FS_DELETE:
-            break;
-            case IO_FS_TRUNCATE:
-            break;
-            case IO_FS_WRITE:
-            break;
-            case IO_FS_READ:
-            break;
-            case EXIT:
-            break;
             default:
                 uint32_t size_msg;
                 recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
@@ -95,6 +58,65 @@ void procesar_conexion_dispatch(void* args_void) {
         }
     }
     return;
+}
+
+void ejecutar_instruccion(char* instruccion, t_log* logger) {
+    //SET AX 1
+    //COPY_STRING 8
+    //IO_FS_WRITE Int4 notas.txt AX ECX EDX
+    //comando = SET, COPYSTRI, IO_FS
+    log_info(logger, "Instruccion: %s", instruccion);
+    log_info(logger, "2: %d", (int)instruccion[2]);
+    log_info(logger, "3: %d", (int)instruccion[3]);
+    log_info(logger, "4: %d", (int)instruccion[4]);
+    
+    char** substrings = string_split(instruccion, " "); // [SET, AX, 1];
+    char* comando = substrings[0];
+    op_code opcode = string_to_opcode(comando);
+
+    switch(opcode) {
+        case SET:
+            char* registro_set = substrings[1];
+            uint8_t valor_set = atoi(substrings[2]);
+
+            break;
+        case MOV_IN:
+        break;
+        case MOV_OUT:
+        break;
+        case SUM:
+        break;
+        case SUB:
+        break;
+        case JNZ:
+        break;
+        case RESIZE:
+        break;
+        case COPY_STRING:
+        break;
+        case WAIT:
+        break;
+        case SIGNAL:
+        break;
+        case IO_GEN_SLEEP:
+        break;
+        case IO_STDIN_READ:
+        break;
+        case IO_STDOUT_WRITE:
+        break;
+        case IO_FS_CREATE:
+        break;
+        case IO_FS_DELETE:
+        break;
+        case IO_FS_TRUNCATE:
+        break;
+        case IO_FS_WRITE:
+        break;
+        case IO_FS_READ:
+        break;
+        case EXIT:
+        break;
+    }
 }
 
 void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
