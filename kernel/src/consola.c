@@ -43,19 +43,20 @@ void procesar_instruccion(void* args_void) {
     char* instruccion = args->leido;
     free(args);
     log_info(logger, "INSTRUCCION: %s", instruccion);
-    char* comando = strtok(instruccion, " ");
+    char** substrings = string_split(instruccion, " ");
+    char* comando = substrings[0];
     log_info(logger, "Comando: %s", comando);
     if(!strcmp(comando, "EJECUTAR_SCRIPT"))
     {
-        char* path = strtok(NULL, " ");
-            if(existe_archivo(path)) {
-                ejecutar_script(path, logger, socket);
+        char* path_script = substrings[1];
+            if(existe_archivo(path_script)) {
+                ejecutar_script(path_script, logger, socket);
             }
     }
     else if(!strcmp(comando, "INICIAR_PROCESO")) {
         
-        char* path = strtok(NULL, " ");
-        enviar_inicio_proceso(socket, path, logger);
+        char* path_proceso = substrings[1];
+        enviar_inicio_proceso(socket, path_proceso, logger);
         uint32_t pid;
         recv(socket, &pid, sizeof(uint32_t), 0);
         log_info(logger, "PID: %d", pid);
@@ -106,7 +107,7 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
     size_t longitud = 0;
     ssize_t leidos;
     fseek(f, 0, SEEK_SET);
-    while((leidos = getline(&linea, &longitud, f)) != 1){
+    while((leidos = getline(&linea, &longitud, f)) != -1){
 
         if (linea[leidos - 1] == '\n') {
             linea[leidos - 1] = '\0';

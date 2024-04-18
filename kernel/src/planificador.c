@@ -124,55 +124,55 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     proceso->registros->SI = SI;
     proceso->registros->DI = DI;
 
-    char* instruccion_de_motivo_string = strtok(motivo_de_desalojo, " ");
-    op_code instruccion_de_motivo = string_to_opcode(motivo_de_desalojo);
+    char** substrings = string_split(motivo_de_desalojo, " ");
+    char* instruccion_de_motivo_string = substrings[0];
+    op_code instruccion_de_motivo = string_to_opcode(instruccion_de_motivo_string);
 
     switch(instruccion_de_motivo){
             case IO_GEN_SLEEP:
-                char* interfaz = strtok(NULL, " ");
-                uint32_t uni_de_trabajo = atoi(strtok(NULL, " "));
-                
+                char* interfaz_sleep = substrings[1];
+                uint32_t uni_de_trabajo = atoi(substrings[2]);
                 break;
             case IO_STDIN_READ:
-                char* interfaz = strtok(NULL, " ");
-                uint32_t registro_direccion = atoi(strtok(NULL, " "));
-                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                char* interfaz_stdin = substrings[1];
+                uint32_t registro_direccion_stdin = atoi(substrings[2]);
+                uint32_t registro_tamanio_stdin = atoi(substrings[3]);
                 break;
             case IO_STDOUT_WRITE:
-                char* interfaz = strtok(NULL, " ");
-                uint32_t registro_direccion = atoi(strtok(NULL, " "));
-                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                char* interfaz_stdout = substrings[1];
+                uint32_t registro_direccion_stdout = atoi(substrings[2]);
+                uint32_t registro_tamanio_stdout = atoi(substrings[3]);
                 break;
             case IO_FS_CREATE:
-                char* interfaz = strtok(NULL, " ");
-                char* nombre_archivo = strtok(NULL, " ");
+                char* interfaz_create = substrings[1];
+                char* nombre_archivo_create = substrings[2];
                 break;
             case IO_FS_DELETE:
-                char* interfaz = strtok(NULL, " ");
-                char* nombre_archivo = strtok(NULL, " ");
+                char* interfaz_delete = substrings[1];
+                char* nombre_archivo_delete = substrings[2];
                 break;
-            case IO_FS_DELETE:
-                char* interfaz = strtok(NULL, " ");
-                char* nombre_archivo = strtok(NULL, " ");
-                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+            case IO_FS_TRUNCATE:
+                char* interfaz_truncate = substrings[1];
+                char* nombre_archivo_truncate = substrings[2];
+                uint32_t registro_tamanio_truncate = atoi(substrings[3]);
                 break;
             case IO_FS_WRITE:
-                char* interfaz = strtok(NULL, " ");
-                char* nombre_archivo = strtok(NULL, " ");
-                uint32_t registro_direccion = atoi(strtok(NULL, " "));
-                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                char* interfaz_write = ssubstrings[1];
+                char* nombre_archivo_write = substrings[2];
+                uint32_t registro_direccion_write = atoi(substrings[3]);
+                uint32_t registro_tamanio_write = atoi(substrings[4]);
                 // TODO: registro puntero archivo
             case IO_FS_READ:
-                char* interfaz = strtok(NULL, " ");
-                char* nombre_archivo = strtok(NULL, " ");
-                uint32_t registro_direccion = atoi(strtok(NULL, " "));
-                uint32_t registro_tamanio = atoi(strtok(NULL, " "));
+                char* interfaz_read = substrings[1];
+                char* nombre_archivo_read = substrings[2];
+                uint32_t registro_direccion_read = atoi(substrings[3]);
+                uint32_t registro_tamanio_read = atoi(substrings[4]);
                 // TODO: registro puntero archivo
             case WAIT:
-                char* recurso = strtok(NULL, " ");
+                char* recurso_wait = substrings[1];
                 break;
             case SIGNAL:
-                char* recurso = strtok(NULL, " ");
+                char* recurso_signal = substrings[1];
                 break;
             case EXIT:
             break;

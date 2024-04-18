@@ -1,3 +1,2 @@
-HOLA
 INICIAR_PROCESO procesos/proceso1.txt
 INICIAR_PROCESO procesos/proceso2.txt
