@@ -22,16 +22,26 @@ void planificar_nuevo_proceso(proceso_t* proceso, t_log* logger)
 
 void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     log_info(logger, "Algoritmo: %s", algoritmo_planificacion);
-    if(!strcmp(algoritmo_planificacion, "FIFO"))
-    {
+    if(!strcmp(algoritmo_planificacion, "FIFO")) {
         log_info(logger, "Se envia el proceso <%d> a CPU", proceso->pid);
         enviar_proceso_a_cpu(proceso);
+        esperar_llegada_de_proceso_fifo(proceso);
+        esperar_contexto_de_ejecucion(proceso, logger);
     }
-    else if(algoritmo_planificacion == "RR" || algoritmo_planificacion == "VRR")
-    {
-        enviar_proceso_a_cpu_con_timer(proceso);
+    else if(!strcmp(algoritmo_planificacion, "RR") || !strcmp(algoritmo_planificacion, "VRR")) {
+        t_temporal* timer = temporal_create();
+        enviar_proceso_a_cpu(proceso);
+        pthread_t hilo_recepcion;
+        recepcion_proceso_t* args_recepcion = malloc(sizeof(recepcion_proceso_t));
+        args_recepcion->proceso = proceso;
+        args_recepcion->timer = timer;
+        args_recepcion->logger = logger;
+        pthread_create(&hilo_recepcion, NULL, (void*) esperar_llegada_de_proceso_pre_timer, (void*) args_recepcion);
+        sleep(quantum);
+        /// MANDAR INTERRUPCION
     }
-    esperar_contexto_de_ejecucion(proceso, logger);
+ 
+
 }
 
 void enviar_proceso_a_cpu(proceso_t* proceso)
@@ -73,14 +83,40 @@ void agregar_pcb(void* stream, int* offset, proceso_t* proceso)
     agregar_uint32_t(stream, &offset, proceso->registros->DI);
 }
 
-void enviar_proceso_a_cpu_con_timer(proceso_t* proceso) {
 
+void esperar_llegada_de_proceso_fifo(proceso_t* proceso) {
+    uint32_t pid;   
+    uint32_t quantum;
+    recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
+    recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
+
+}
+
+void esperar_llegada_de_proceso_pre_timer(void* args_void) {
+    recepcion_proceso_t* args = (recepcion_proceso_t*) args_void;
+    proceso_t* proceso = args->proceso;
+    t_temporal* timer = args->timer;
+    t_log* logger = args->logger;
+    free(args);
+    uint32_t pid; 
+    uint32_t quantum;  
+    recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
+    temporal_stop(timer);
+    recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
+    if(!strcmp(algoritmo_planificacion, "VRR")) {
+    if(temporal_gettime(timer) < proceso->quantum) {
+        proceso->quantum-= (uint32_t) temporal_gettime(timer);
+    }
+    else {
+        proceso->quantum = quantum;
+    }
+    temporal_destroy(timer);
+    }
 }
 
 void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
 {
-    uint32_t pid;
-    uint32_t quantum;
+
     uint32_t PC;
     uint8_t AX;
     uint8_t BX;
@@ -95,8 +131,6 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     uint32_t size_motivo;
     char* motivo_de_desalojo;
 
-    recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
-    recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &PC, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &AX, sizeof(uint8_t), 0);
     recv(cpu_dispatch_fd, &BX, sizeof(uint8_t), 0);
@@ -132,6 +166,7 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
             case IO_GEN_SLEEP:
                 char* interfaz_sleep = substrings[1];
                 uint32_t uni_de_trabajo = atoi(substrings[2]);
+                enviar_proceso_io_gen_sleep(proceso, interfaz_sleep, uni_de_trabajo);
                 break;
             case IO_STDIN_READ:
                 char* interfaz_stdin = substrings[1];
