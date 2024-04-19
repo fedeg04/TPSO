@@ -19,6 +19,5 @@ int cantidad_entradas_tlb;
 char* algoritmo_tlb;
 int servers_escuchar();
 registros_t* registros_cpu;
-proceso_t* pcb;
 
 #endif
