@@ -157,7 +157,7 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
                 uint32_t registro_tamanio_truncate = atoi(substrings[3]);
                 break;
             case IO_FS_WRITE:
-                char* interfaz_write = ssubstrings[1];
+                char* interfaz_write = substrings[1];
                 char* nombre_archivo_write = substrings[2];
                 uint32_t registro_direccion_write = atoi(substrings[3]);
                 uint32_t registro_tamanio_write = atoi(substrings[4]);

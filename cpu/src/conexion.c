@@ -38,15 +38,22 @@ void procesar_conexion_dispatch(void* args_void) {
         switch(opcode) {
             case ENVIAR_PCB:
                 log_info(logger, "Me llego un proceso");
-                proceso_t* pcb = malloc(sizeof(proceso_t));
+                pcb = malloc(sizeof(proceso_t));
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb);
-                registros_cpu = pcb->registros;
-                enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
+                while (1)
+                {
+                    enviar_pid_pc(pcb->pid, pcb->registros->PC, memoria_fd);
+                    char* instruccion = recibir_instruccion(memoria_fd);
+                    if(!strcmp(instruccion, "EXIT")) {
+                        break;
+                    }
+                    ejecutar_instruccion(instruccion, logger);
+                    //verificar_interrupcion();
+                }
 
-                char* instruccion = recibir_instruccion(memoria_fd);
-                
-                ejecutar_instruccion(instruccion, logger);
+
+
                 break;
             default:
                 uint32_t size_msg;
@@ -61,14 +68,6 @@ void procesar_conexion_dispatch(void* args_void) {
 }
 
 void ejecutar_instruccion(char* instruccion, t_log* logger) {
-    //SET AX 1
-    //COPY_STRING 8
-    //IO_FS_WRITE Int4 notas.txt AX ECX EDX
-    //comando = SET, COPYSTRI, IO_FS
-    log_info(logger, "Instruccion: %s", instruccion);
-    log_info(logger, "2: %d", (int)instruccion[2]);
-    log_info(logger, "3: %d", (int)instruccion[3]);
-    log_info(logger, "4: %d", (int)instruccion[4]);
     
     char** substrings = string_split(instruccion, " "); // [SET, AX, 1];
     char* comando = substrings[0];
@@ -78,6 +77,35 @@ void ejecutar_instruccion(char* instruccion, t_log* logger) {
         case SET:
             char* registro_set = substrings[1];
             uint8_t valor_set = atoi(substrings[2]);
+            
+            if (strcmp(registro_set, "AX") == 0) {
+                pcb->registros->AX = valor_set;
+            } else if (strcmp(registro_set, "BX") == 0) {
+                pcb->registros->BX = valor_set;
+            } else if (strcmp(registro_set, "CX") == 0) {
+                pcb->registros->CX = valor_set;
+            } else if (strcmp(registro_set, "DX") == 0) {
+                pcb->registros->DX = valor_set;
+            } else if (strcmp(registro_set, "EAX") == 0) {
+                pcb->registros->EAX = valor_set;
+            } else if (strcmp(registro_set, "EBX") == 0) {
+                pcb->registros->EBX = valor_set;
+            } else if (strcmp(registro_set, "ECX") == 0) {
+                pcb->registros->ECX = valor_set;
+            } else if (strcmp(registro_set, "EDX") == 0) {
+                pcb->registros->EDX = valor_set;
+            } else if (strcmp(registro_set, "PC") == 0) {
+                pcb->registros->PC = valor_set;
+            } else if (strcmp(registro_set, "SI") == 0) {
+                pcb->registros->SI = valor_set;
+            } else if (strcmp(registro_set, "DI") == 0) {
+                pcb->registros->DI = valor_set;
+            } else {
+                log_info(logger, "Registro no válido: %s\n", registro_set);
+            }
+
+            log_info(logger, "AX: %d", pcb->registros->AX);
+            log_info(logger, "BX: %d", pcb->registros->BX);
 
             break;
         case MOV_IN:
@@ -158,6 +186,7 @@ void recibir_pcb(int socket, proceso_t* pcb) {
     recv(socket, &DI, sizeof(uint32_t), 0);
     pcb->pid = pid;
     pcb->quantum = quantum;
+    pcb->registros->PC = PC;
     pcb->registros->AX = AX;
     pcb->registros->BX = BX;
     pcb->registros->CX = CX;
@@ -167,7 +196,7 @@ void recibir_pcb(int socket, proceso_t* pcb) {
     pcb->registros->ECX = ECX;
     pcb->registros->EDX = EDX;
     pcb->registros->SI = SI;
-    pcb->registros->SI = DI;
+    pcb->registros->DI = DI;
 }
 
 char* recibir_instruccion(int socket) {
@@ -175,5 +204,6 @@ char* recibir_instruccion(int socket) {
     recv(socket, &size, sizeof(uint32_t), 0);
     char* instruccion = malloc(size);
     recv(socket, instruccion, size, 0);
+    pcb->registros->PC++;
     return instruccion;
 }

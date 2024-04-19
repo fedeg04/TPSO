@@ -15,6 +15,8 @@ int main(int argc, char* argv[]) {
     t_config* config_memoria = iniciar_config("memoria.config");
     get_config(config_memoria);
 
+    archivos_procesos = list_create();
+
     //Empieza el servidor
     int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha, "memoria");
     while(server_escuchar(memoria_fd, logger_memoria, (procesar_conexion_func_t)procesar_conexion, "memoria"));

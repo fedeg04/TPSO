@@ -1,24 +1,12 @@
 #include <../include/conexion.h>
 
+ //Lista de archivos con PID
 
 void procesar_conexion(void* args_void) {
     conexion_args_t* args = (conexion_args_t*) args_void;
     int socket_cliente = args->socket_cliente;
     t_log* logger = args->logger;
     free(args);
-
-    t_list* archivos_procesos = list_create(); //Lista de archivos con PID
-
-
-    archivo_proceso_t* archivo_proceso = malloc(sizeof(archivo_proceso_t));
-    archivo_proceso->f = fopen("./procesos/proceso1.txt", "r");
-    archivo_proceso->pid = 1;
-    list_add(archivos_procesos, archivo_proceso);
-    
-    archivo_proceso_t* archivo_proceso2 = malloc(sizeof(archivo_proceso_t));
-    archivo_proceso2->f = fopen("./procesos/proceso1.txt", "r");
-    archivo_proceso2->pid = 2;
-    list_add(archivos_procesos, archivo_proceso2);
 
     op_code opcode;
     while (socket_cliente != 1) {
@@ -39,11 +27,8 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &pid, sizeof(uint32_t), 0);
                 log_info(logger, "PID RECIBIDO: %d", pid);
                 if(existe_archivo(path)) {
-                    archivo_proceso_t* archivo_proceso = malloc(sizeof(archivo_proceso_t));
-                    archivo_proceso->f = fopen(path, "r");
-                    archivo_proceso->pid = pid;
-                    agregar_proceso(archivo_proceso, archivos_procesos);
-                    enviar_pid(socket_cliente, archivo_proceso->pid);
+                    agregar_proceso(archivos_procesos, path, pid);
+                    enviar_pid(socket_cliente, pid);
                 } else {
                     enviar_pid(socket_cliente, 0);
                 }
@@ -55,6 +40,11 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &pid_a_buscar, sizeof(uint32_t), 0);
                 uint32_t pc;
                 recv(socket_cliente, &pc, sizeof(uint32_t), 0);
+
+                archivo_proceso_t* primero = malloc(sizeof(archivo_proceso_t));
+
+                primero = list_get(archivos_procesos, 0);
+                log_info(logger, "Archivo: %s", primero->path);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
                 log_info(logger, "Instruccion: %s", instruccion);
                 enviar_instruccion(socket_cliente, instruccion);                            

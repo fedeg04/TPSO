@@ -11,5 +11,6 @@ int tam_memoria;
 int tam_pagina;
 char* path_instrucciones;
 int retardo_respuesta;
+t_list* archivos_procesos;
 
 #endif
