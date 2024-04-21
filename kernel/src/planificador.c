@@ -158,10 +158,17 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     proceso->registros->SI = SI;
     proceso->registros->DI = DI;
 
-    char** substrings = string_split(motivo_de_desalojo, " ");
-    char* instruccion_de_motivo_string = substrings[0];
+    log_info(logger, "Motivo: %s", motivo_de_desalojo);
+    char** substrings;
+    char* instruccion_de_motivo_string;
+    if(string_contains(motivo_de_desalojo, " ")){
+        substrings = string_split(motivo_de_desalojo, " ");
+        instruccion_de_motivo_string = substrings[0];
+    } else {
+        instruccion_de_motivo_string = motivo_de_desalojo;
+    }
     op_code instruccion_de_motivo = string_to_opcode(instruccion_de_motivo_string);
-
+    log_info(logger, "Instruccion: %s", instruccion_de_motivo_string);
     switch(instruccion_de_motivo){
             case IO_GEN_SLEEP:
                 char* interfaz_sleep = substrings[1];

@@ -5,6 +5,7 @@
 #include <../include/protocolo.h>
 #include <../include/registros.h>
 #include <../include/conversores.h>
+#include <../include/frees.h>
 
 void procesar_conexion_interrupt(void* args);
 void procesar_conexion_dispatch(void* args);

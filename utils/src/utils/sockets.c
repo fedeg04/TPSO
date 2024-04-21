@@ -3,6 +3,7 @@
 int iniciar_servidor(t_log* logger, char* puerto, char* nombre_server)
 {
    int socket_servidor;
+   int yes = 1;
    struct addrinfo hints, *servinfo, *p;
    memset(&hints, 0, sizeof(hints));
    hints.ai_family = AF_UNSPEC;
@@ -13,6 +14,12 @@ int iniciar_servidor(t_log* logger, char* puerto, char* nombre_server)
    socket_servidor = socket(servinfo->ai_family,
                             servinfo->ai_socktype,
                             servinfo->ai_protocol);
+
+    if (setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+        perror("setsockopt");
+        exit(1);
+    }
+
    bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
    listen(socket_servidor, SOMAXCONN);
    freeaddrinfo(servinfo);
@@ -30,8 +37,6 @@ int server_escuchar(int socket_server, t_log* logger, procesar_conexion_func_t p
         pthread_create(&hilo, NULL, procesar_conexion_func, (void*) args);
         pthread_detach(hilo);
         return 1;
-        //TODO: agregarle hilos probablemente, y hacer procesar conexión en todos los módulos server (protocolo de cada uno)
-        //procesar_conexion(logger, socket_cliente);
     }
     return 0;
 }

@@ -48,15 +48,17 @@ void procesar_conexion_dispatch(void* args_void) {
                     char* instruccion = recibir_instruccion(memoria_fd);
                     if(!strcmp(instruccion, "EXIT")) {
                         pcb->registros = registros_cpu;
-                        enviar_contexto(socket_cliente, pcb);
+                        enviar_contexto(socket_cliente, pcb, instruccion);
                         break;
                     }
                     ejecutar_instruccion(instruccion, logger);
                     //verificar_interrupcion();
                     registros_cpu->PC++;
+                    free(instruccion);
                 }
-                log_info(logger, "AX: %d", registros_cpu->AX);
-                log_info(logger, "BX: %d", registros_cpu->BX);
+                free(pcb);
+                log_info(logger, "AX: %u", registros_cpu->AX);
+                log_info(logger, "BX: %u", registros_cpu->BX);
                 break;
             default:
                 uint32_t size_msg;
@@ -144,6 +146,7 @@ void ejecutar_instruccion(char* instruccion, t_log* logger) {
         case EXIT:
         break;
     }
+    string_split_free(*substrings);
 }
 
 void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
@@ -206,7 +209,7 @@ char* recibir_instruccion(int socket) {
     return instruccion;
 }
 
-void enviar_contexto(int socket, proceso_t* pcb) {
+void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
     void* stream = malloc(9 * sizeof(uint32_t) + 4 * sizeof(uint8_t));
     int offset = 0;
     agregar_uint32_t(stream, &offset, pcb->pid);
@@ -222,5 +225,7 @@ void enviar_contexto(int socket, proceso_t* pcb) {
     agregar_uint32_t(stream, &offset, pcb->registros->EDX);
     agregar_uint32_t(stream, &offset, pcb->registros->SI);
     agregar_uint32_t(stream, &offset, pcb->registros->DI);
+    agregar_string(stream, &offset, instruccion);
     send(socket, stream, offset, 0);
+    free(stream);
 }
