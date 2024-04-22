@@ -16,6 +16,14 @@ char* ip_kernel;
 char* path_base_dialfs;
 int block_size;
 int block_count;
+int kernel_fd;
+void conectar_a_kernel();
+void atender_pedidos_kernel();
+void generica_atender_kernel();
+void stdin_atender_kernel();
+void stdout_atender_kernel();
+void dialfs_atender_kernel();
+void fin_de_sleep();
 
 
 
