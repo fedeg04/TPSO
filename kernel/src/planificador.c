@@ -25,7 +25,7 @@ void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     if(!strcmp(algoritmo_planificacion, "FIFO")) {
         log_info(logger, "Se envia el proceso <%d> a CPU", proceso->pid);
         enviar_proceso_a_cpu(proceso);
-        esperar_llegada_de_proceso_fifo(proceso);
+        esperar_llegada_de_proceso_fifo(proceso, logger);
         esperar_contexto_de_ejecucion(proceso, logger);
     }
     else if(!strcmp(algoritmo_planificacion, "RR") || !strcmp(algoritmo_planificacion, "VRR")) {
@@ -63,6 +63,7 @@ void enviar_proceso_a_cpu(proceso_t* proceso)
     agregar_uint32_t(stream, &offset, proceso->registros->SI);
     agregar_uint32_t(stream, &offset, proceso->registros->DI);
     send(cpu_dispatch_fd, stream, offset, 0);
+    free(stream);
 }
 
 void agregar_pcb(void* stream, int* offset, proceso_t* proceso)
@@ -84,7 +85,7 @@ void agregar_pcb(void* stream, int* offset, proceso_t* proceso)
 }
 
 
-void esperar_llegada_de_proceso_fifo(proceso_t* proceso) {
+void esperar_llegada_de_proceso_fifo(proceso_t* proceso, t_log* logger) {
     uint32_t pid;   
     uint32_t quantum;
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
@@ -158,10 +159,17 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     proceso->registros->SI = SI;
     proceso->registros->DI = DI;
 
-    char** substrings = string_split(motivo_de_desalojo, " ");
-    char* instruccion_de_motivo_string = substrings[0];
+    log_info(logger, "Motivo: %s", motivo_de_desalojo);
+    char** substrings;
+    char* instruccion_de_motivo_string;
+    if(string_contains(motivo_de_desalojo, " ")){
+        substrings = string_split(motivo_de_desalojo, " ");
+        instruccion_de_motivo_string = substrings[0];
+    } else {
+        instruccion_de_motivo_string = motivo_de_desalojo;
+    }
     op_code instruccion_de_motivo = string_to_opcode(instruccion_de_motivo_string);
-
+    log_info(logger, "Instruccion: %s", instruccion_de_motivo_string);
     switch(instruccion_de_motivo){
             case IO_GEN_SLEEP:
                 char* interfaz_sleep = substrings[1];
@@ -210,9 +218,38 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
                 char* recurso_signal = substrings[1];
                 break;
             case EXIT:
+                liberar_recursos_proceso(proceso, logger);
             break;
             //case TIMER:
             default:
     }
+    free(motivo_de_desalojo);
 
+}
+
+void liberar_recursos_proceso(proceso_t* proceso, t_log* logger) {
+    if(list_remove_element(pcbs_exec, proceso)){
+        elegir_proceso_a_exec(logger);
+    }
+    finalizar_proceso(proceso);
+
+}
+
+void elegir_proceso_a_exec(t_log* logger) {
+    if(!list_is_empty(pcbs_ready)) {
+    proceso_t* proceso_a_exec = list_remove(pcbs_ready, 0);
+        log_info(logger, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso_a_exec->pid);
+            list_add(pcbs_exec, proceso_a_exec);
+            list_remove_element(pcbs_ready,proceso_a_exec);
+            ejecutar_proceso(proceso_a_exec, logger);
+        }
+}
+
+void finalizar_proceso(proceso_t* proceso) {
+    void* stream = malloc(sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
+    agregar_uint32_t(stream, &offset, proceso->pid);
+    send(memoria_interrupt_fd, stream, offset, 0);
+    free(stream);
 }

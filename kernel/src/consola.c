@@ -52,6 +52,7 @@ void procesar_instruccion(void* args_void) {
             if(existe_archivo(path_script)) {
                 ejecutar_script(path_script, logger, socket);
             }
+            free(path_script);
     }
     else if(!strcmp(comando, "INICIAR_PROCESO")) {
         
@@ -64,6 +65,7 @@ void procesar_instruccion(void* args_void) {
             proceso_t* proceso = crear_pcb(pid);
             planificar_nuevo_proceso(proceso, logger);
         }
+        free(path_proceso);
         }
     else if(!strcmp(comando, "FINALIZAR_PROCESO"))
     {
@@ -85,7 +87,8 @@ void procesar_instruccion(void* args_void) {
     {
 
     }
-    
+
+    free(substrings);
     //le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
 }
 

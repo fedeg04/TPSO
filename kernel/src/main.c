@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     procesos_activos = 0;
 
     //Se conecta como cliente a la memoria (interrupt)
-    int memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
+    memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
     
     //Se conecta como cliente a la memoria (dispatch)
     int memoria_dispatch_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
     while(server_escuchar(kernel_fd, logger_kernel, (procesar_conexion_func_t)procesar_conexion, "kernel"));
 
     pthread_join(hilo_consola, NULL);
+    liberar_listas();
     terminar_programa(logger_kernel, config_kernel);
     liberar_conexion(memoria_dispatch_fd);
     liberar_conexion(memoria_interrupt_fd);

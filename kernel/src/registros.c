@@ -8,13 +8,27 @@ void inicializar_listas() {
     pcbs_stdin = list_create();
     pcbs_stdout = list_create();
     pcbs_dialfs = list_create();
-    t_list* pcbs_recursos[cantidad_recursos];
+    pcbs_recursos = malloc(cantidad_recursos *sizeof(t_list));
     for(int i = 0; i < cantidad_recursos; i++) 
     { 
         pcbs_recursos[i] = list_create();
     }
 }
 
+void liberar_listas() {
+    list_destroy(pcbs_new);
+    list_destroy(pcbs_ready);
+    list_destroy(pcbs_exec);
+    list_destroy(pcbs_generica);
+    list_destroy(pcbs_stdin);
+    list_destroy(pcbs_stdout);
+    list_destroy(pcbs_dialfs);
+    for(int i = 0; i < cantidad_recursos; i++) 
+    { 
+        list_destroy(pcbs_recursos[i]);
+    }
+    free(pcbs_recursos);
+}
 void get_config(t_config* config) {
     puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
     ip_memoria = config_get_string_value(config, "IP_MEMORIA");
@@ -33,6 +47,7 @@ void get_config(t_config* config) {
     { 
         instancias_recursos[i] = atoi(instancias_string[i]);
     }
+    free(instancias_string);
 }
 
     int cantidadDeRecursos(char** instancias_string)
