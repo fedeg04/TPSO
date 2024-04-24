@@ -14,6 +14,8 @@ extern int memoria_fd;
 extern registros_t* registros_cpu;
 extern proceso_t* pcb;
 char* recibir_instruccion(int socket);
-void ejecutar_instruccion(char* instruccion, t_log* logger);
+void ejecutar_instruccion(char* instruccion, t_log* logger, uint32_t pid);
+void set_registros(char* registro, uint32_t valor);
+uint32_t get_valor_registro(char* registro);
 
 #endif
