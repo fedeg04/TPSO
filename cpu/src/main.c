@@ -41,6 +41,6 @@ int main(int argc, char *argv[])
 
     liberar_conexion(memoria_fd);
     terminar_programa(logger_cpu, config_cpu);
-
+    free(registros_cpu);
     return 0;
 }
