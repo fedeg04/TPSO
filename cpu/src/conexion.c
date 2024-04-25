@@ -40,17 +40,18 @@ void procesar_conexion_dispatch(void* args_void) {
                 //log_info(logger, "Me llego un proceso");     
                 proceso_t* pcb = malloc(sizeof(proceso_t));  
                 pcb->registros = malloc(sizeof(registros_t));
-                recibir_pcb(socket_cliente, pcb);
+                recibir_pcb(socket_cliente, pcb, logger);
+                log_info(logger, "PCB->PC: %d", pcb->registros->PC);
                 memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
                 while (1)
                 {
-                    enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
                     log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
+                    enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
                     char* instruccion = recibir_instruccion(memoria_fd);
                     if(!strcmp(instruccion, "EXIT")) {
                         pcb->registros = registros_cpu;
-                        enviar_contexto(socket_cliente, pcb, instruccion);
                         log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
+                        enviar_contexto(socket_cliente, pcb, instruccion);
                         break;
                     }
                     ejecutar_instruccion(instruccion, logger, pcb->pid);
@@ -160,7 +161,7 @@ void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
     free(stream);
 }
 
-void recibir_pcb(int socket, proceso_t* pcb) {
+void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
     uint32_t pid;
     uint32_t quantum;
     uint32_t PC;
@@ -189,17 +190,18 @@ void recibir_pcb(int socket, proceso_t* pcb) {
     recv(socket, &DI, sizeof(uint32_t), 0);
     pcb->pid = pid;
     pcb->quantum = quantum;
-    registros_cpu->PC = PC;
-    registros_cpu->AX = AX;
-    registros_cpu->BX = BX;
-    registros_cpu->CX = CX;
-    registros_cpu->DX = DX;
-    registros_cpu->EAX = EAX;
-    registros_cpu->EBX = EBX;
-    registros_cpu->ECX = ECX;
-    registros_cpu->EDX = EDX;
-    registros_cpu->SI = SI;
-    registros_cpu->DI = DI;
+    log_info(logger, "PC: %d", PC);
+    pcb->registros->PC = PC;
+    pcb->registros->AX = AX;
+    pcb->registros->BX = BX;
+    pcb->registros->CX = CX;
+    pcb->registros->DX = DX;
+    pcb->registros->EAX = EAX;
+    pcb->registros->EBX = EBX;
+    pcb->registros->ECX = ECX;
+    pcb->registros->EDX = EDX;
+    pcb->registros->SI = SI;
+    pcb->registros->DI = DI;
 }
 
 char* recibir_instruccion(int socket) {
