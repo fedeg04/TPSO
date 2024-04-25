@@ -22,13 +22,14 @@ int main(int argc, char* argv[]) {
     get_config(config_io);
 
 // Se conecta al kernel
-    int kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
+    kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
     char* msg = "E/S en Kernel";
     void* stream = malloc(sizeof(uint32_t) + strlen(msg) + 1);
     uint32_t offset = 0;
     agregar_opcode(stream, &offset, MSG);
     agregar_string(stream, &offset, msg);
     send(kernel_fd, stream, offset, 0);
+
     //Se conecta a la memoria
     int memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
     char* msgMem = "E/S en Memoria";
@@ -38,10 +39,71 @@ int main(int argc, char* argv[]) {
     agregar_string(streamMem, &offsetMem, msgMem);
     send(memoria_fd, streamMem, offsetMem, 0);
 
-    
+    conectar_a_kernel();
+    atender_pedidos_kernel();
+
 
     terminar_programa(logger_io, config_io);
     liberar_conexion(memoria_fd);
     liberar_conexion(kernel_fd);
     return 0;
+}
+
+void conectar_a_kernel() {
+  void* stream = malloc(sizeof(op_code));
+  int offset;
+  agregar_opcode(stream, &offset, string_to_opcode(tipo_interfaz));
+  send(kernel_fd, stream, offset, 0);  
+}
+
+void atender_pedidos_kernel() {
+
+   if(!strcmp("GENERICA", tipo_interfaz)) {
+    generica_atender_kernel();
+   } 
+   if(!strcmp("STDIN", tipo_interfaz)) {
+    stdin_atender_kernel();
+   } 
+   if(!strcmp("STDOUT", tipo_interfaz)) {
+    stdout_atender_kernel();
+   } 
+   if(!strcmp("DIALFS", tipo_interfaz)) {
+    dialfs_atender_kernel();
+   } 
+}
+
+void generica_atender_kernel() {
+    while(1) {
+        op_code opcode;
+        recv(kernel_fd, &opcode, sizeof(op_code), 0);
+        switch(opcode) {
+            case IO_GEN_SLEEP:
+            uint32_t unis_de_trabajo;
+            recv(kernel_fd, &unis_de_trabajo, sizeof(op_code), 0);
+            usleep(tiempo_unidad_trabajo * (int) unis_de_trabajo);
+            fin_de_sleep();
+                break;
+            default:
+        }
+    }
+}
+
+void stdin_atender_kernel() {
+    
+}
+
+void stdout_atender_kernel() {
+    
+}
+
+void dialfs_atender_kernel() {
+    
+}
+
+void fin_de_sleep() {
+    void* stream = sizeof(op_code);
+    int offset = 0;
+    agregar_opcode(stream, &offset, FIN_DE_SLEEP);
+    send(kernel_fd, stream, offset, 0);
+    free(stream);
 }

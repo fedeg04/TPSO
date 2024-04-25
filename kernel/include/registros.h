@@ -28,11 +28,14 @@ extern t_list* pcbs_generica;
 extern t_list* pcbs_stdin;
 extern t_list* pcbs_stdout;
 extern t_list* pcbs_dialfs;
+extern t_list** pcbs_recursos;
 extern int procesos_activos;
 extern uint32_t pid_siguiente;
 extern int cpu_dispatch_fd;
+extern int memoria_interrupt_fd;
 extern void enviar_proceso_io_gen_sleep(proceso_t* proceso,char* interfaz_sleep, uint32_t uni_de_trabajo);
 void inicializar_listas();
+void liberar_listas();
 void get_config(t_config* config); 
 int cantidadDeRecursos(char** instancias_string);
 

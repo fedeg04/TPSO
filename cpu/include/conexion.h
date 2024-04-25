@@ -7,6 +7,7 @@
 #include <../include/conversores.h>
 #include <../include/frees.h>
 
+
 void procesar_conexion_interrupt(void* args);
 void procesar_conexion_dispatch(void* args);
 void recibir_pcb(int socket, proceso_t* pcb);

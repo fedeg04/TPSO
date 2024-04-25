@@ -29,9 +29,11 @@ t_list* pcbs_generica;
 t_list* pcbs_stdin;
 t_list* pcbs_stdout;
 t_list* pcbs_dialfs;
+t_list** pcbs_recursos;
 int procesos_activos;
 uint32_t pid_siguiente;
 int cpu_dispatch_fd;
+int memoria_interrupt_fd;
 
 
 

@@ -14,19 +14,44 @@ void procesar_conexion(void* args_void) {
         }
 
         switch(opcode) {
-            case ENVIAR_PCB:
-            case DATOS_PCB:
             case GENERICA:
+                log_info(logger, "Se conectó la interfaz genérica");
+                conectar_generica();
+                break;
             case STDIN:
+                conectar_stdin();
+                break;
             case STDOUT:
+                conectar_stdout();
+                break;
             case DIALFS:
+                conectar_dialfs();
+                break;
+            case FIN_DE_SLEEP:
+                break;
             default:
                 uint32_t size_msg;
                 recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
                 void* msg = malloc(size_msg);
                 recv(socket_cliente, msg, size_msg, 0);
-                log_info(logger, "%s", msg);
+                //log_info(logger, "%s", msg);
         }
     }
     return;
+}
+
+void conectar_generica() {
+
+}
+
+void conectar_stdin() {
+    
+}
+
+void conectar_stdout() {
+    
+}
+
+void conectar_dialfs() {
+    
 }

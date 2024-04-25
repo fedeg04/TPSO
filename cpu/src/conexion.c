@@ -37,7 +37,7 @@ void procesar_conexion_dispatch(void* args_void) {
 
         switch(opcode) {
             case ENVIAR_PCB:
-                log_info(logger, "Me llego un proceso");     
+                //log_info(logger, "Me llego un proceso");     
                 proceso_t* pcb = malloc(sizeof(proceso_t));  
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb);
@@ -69,7 +69,7 @@ void procesar_conexion_dispatch(void* args_void) {
                 recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
                 void* msg = malloc(size_msg);
                 recv(socket_cliente, msg, size_msg, 0);
-                log_info(logger, "%s", msg);
+                //log_info(logger, "%s", msg);
                 break;
         }
     }
@@ -211,8 +211,7 @@ char* recibir_instruccion(int socket) {
 }
 
 void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
-    uint32_t size = string_length(instruccion) + 1;
-    void* stream = malloc(9 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + size);
+    void* stream = malloc(9 * sizeof(uint32_t) + 4 * sizeof(uint8_t));
     int offset = 0;
     agregar_uint32_t(stream, &offset, pcb->pid);
     agregar_uint32_t(stream, &offset, pcb->quantum);

@@ -27,6 +27,7 @@ typedef enum {
     STDIN,
     STDOUT,
     DIALFS,
+    FIN_DE_SLEEP,
     ENVIAR_PCB,
     INTERRUMPIR,
     FETCH,
