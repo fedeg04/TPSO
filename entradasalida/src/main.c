@@ -32,12 +32,6 @@ int main(int argc, char* argv[]) {
 
     //Se conecta a la memoria
     int memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
-    char* msgMem = "E/S en Memoria";
-    void* streamMem = malloc(sizeof(uint32_t) + strlen(msg) + 1);
-    uint32_t offsetMem = 0;
-    agregar_opcode(streamMem, &offsetMem, MSG);
-    agregar_string(streamMem, &offsetMem, msgMem);
-    send(memoria_fd, streamMem, offsetMem, 0);
 
     conectar_a_kernel();
     atender_pedidos_kernel();

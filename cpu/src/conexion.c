@@ -27,17 +27,15 @@ void procesar_conexion_dispatch(void* args_void) {
     int socket_cliente = args->socket_cliente;
     t_log* logger = args->logger;
     free(args);
-
     op_code opcode;
     while (socket_cliente != 1) {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
             log_info(logger, "Tiro error");
             return;
         }
-
+        
         switch(opcode) {
-            case ENVIAR_PCB:
-                //log_info(logger, "Me llego un proceso");     
+            case ENVIAR_PCB:    
                 proceso_t* pcb = malloc(sizeof(proceso_t));  
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb, logger);
@@ -49,9 +47,12 @@ void procesar_conexion_dispatch(void* args_void) {
                     enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
                     char* instruccion = recibir_instruccion(memoria_fd);
                     if(!strcmp(instruccion, "EXIT")) {
-                        pcb->registros = registros_cpu;
+                        memcpy(pcb->registros, registros_cpu, sizeof(register_t));
                         log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
                         enviar_contexto(socket_cliente, pcb, instruccion);
+                        free(pcb->registros);
+                        free(pcb);
+                        free(instruccion);
                         break;
                     }
                     ejecutar_instruccion(instruccion, logger, pcb->pid);
@@ -61,16 +62,8 @@ void procesar_conexion_dispatch(void* args_void) {
                 }
                 log_info(logger, "AX: %u", registros_cpu->AX);
                 log_info(logger, "BX: %u", registros_cpu->BX);
-                free(pcb->registros); 
-                //TODO: problema, liberamos pcb->registros y se liberan los registros de la cpu tambien.
-                free(pcb);
                 break;
             default:
-                uint32_t size_msg;
-                recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
-                void* msg = malloc(size_msg);
-                recv(socket_cliente, msg, size_msg, 0);
-                //log_info(logger, "%s", msg);
                 break;
         }
     }
@@ -79,7 +72,7 @@ void procesar_conexion_dispatch(void* args_void) {
 
 void ejecutar_instruccion(char* instruccion, t_log* logger, uint32_t pid) {
     
-    char** substrings = string_split(instruccion, " "); // [SET, AX, 1];
+    char** substrings = string_split(instruccion, " ");
     char* comando = substrings[0];
     op_code opcode = string_to_opcode(comando);
     char* registro_dest;
@@ -106,9 +99,7 @@ void ejecutar_instruccion(char* instruccion, t_log* logger, uint32_t pid) {
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pid, comando, registro_dest, registro_orig);
             valor_dest = get_valor_registro(registro_dest);
             valor_orig = get_valor_registro(registro_orig);
-            log_info(logger, "%u + %u = %u", valor_dest, valor_orig, valor_dest + valor_orig);
             set_registros(registro_dest, valor_dest + valor_orig);
-            log_info(logger, "AX: %hhu\n BX: %hhu", registros_cpu->AX , registros_cpu->BX);
             break;
         case SUB:
             registro_dest = substrings[1];
@@ -116,10 +107,17 @@ void ejecutar_instruccion(char* instruccion, t_log* logger, uint32_t pid) {
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pid, comando, registro_dest, registro_orig);
             valor_dest = get_valor_registro(registro_dest);
             valor_orig = get_valor_registro(registro_orig);
+            log_info(logger, "1: %d, 2: %d", valor_dest, valor_orig);
             set_registros(registro_dest, valor_dest - valor_orig);
-            log_info(logger, "AX: %hhu\n BX: %hhu", valor_dest , valor_orig);
             break;
         case JNZ:
+            registro_orig = substrings[1];
+            valor_dest = atoi(substrings[2]);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pid, comando, registro_orig, valor_dest);
+            valor_orig = get_valor_registro(registro_orig);
+            if(valor_orig != 0) {
+                set_registros("PC", valor_dest);
+            }
         break;
         case RESIZE:
         break;
@@ -190,7 +188,6 @@ void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
     recv(socket, &DI, sizeof(uint32_t), 0);
     pcb->pid = pid;
     pcb->quantum = quantum;
-    log_info(logger, "PC: %d", PC);
     pcb->registros->PC = PC;
     pcb->registros->AX = AX;
     pcb->registros->BX = BX;
@@ -213,7 +210,8 @@ char* recibir_instruccion(int socket) {
 }
 
 void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
-    void* stream = malloc(9 * sizeof(uint32_t) + 4 * sizeof(uint8_t));
+    uint32_t tamanio = string_length(instruccion) + 1;
+    void* stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
     int offset = 0;
     agregar_uint32_t(stream, &offset, pcb->pid);
     agregar_uint32_t(stream, &offset, pcb->quantum);

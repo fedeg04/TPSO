@@ -18,5 +18,6 @@ char* recibir_instruccion(int socket);
 void ejecutar_instruccion(char* instruccion, t_log* logger, uint32_t pid);
 void set_registros(char* registro, uint32_t valor);
 uint32_t get_valor_registro(char* registro);
+void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket);
 
 #endif
