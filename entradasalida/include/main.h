@@ -24,6 +24,7 @@ void stdin_atender_kernel();
 void stdout_atender_kernel();
 void dialfs_atender_kernel();
 void fin_de_sleep();
+void interfaz_desconectarse(op_code code_interfaz);
 
 
 

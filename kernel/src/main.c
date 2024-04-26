@@ -11,6 +11,7 @@ int main(int argc, char* argv[]) {
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
     inicializar_listas();
+    diccionario_interfaces = dictionary_create();
     pid_siguiente = 1;
     procesos_activos = 0;
 
@@ -19,12 +20,14 @@ int main(int argc, char* argv[]) {
     
     //Se conecta como cliente a la memoria (dispatch)
     int memoria_dispatch_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
+
     empezar_hilo_consola(&hilo_consola, logger_kernel, memoria_dispatch_fd);
 
     //Se conecta como cliente al CPU dispatch
     cpu_dispatch_fd = generar_conexion(logger_kernel, "CPU dispatch", ip_cpu, puerto_cpu_dispatch, config_kernel);
+
     //Se conecta como cliente al CPU interrupt
-    int cpu_interrupt_fd = generar_conexion(logger_kernel, "CPU interrupt", ip_cpu, puerto_cpu_interrupt, config_kernel);    
+    cpu_interrupt_fd = generar_conexion(logger_kernel, "CPU interrupt", ip_cpu, puerto_cpu_interrupt, config_kernel);    
     
     //Empieza el servidor
     int kernel_fd = iniciar_servidor(logger_kernel, puerto_escucha, "kernel");

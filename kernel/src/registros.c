@@ -4,6 +4,7 @@ void inicializar_listas() {
     pcbs_new = list_create();
     pcbs_ready = list_create();
     pcbs_exec = list_create();
+    pcbs_ready_prioritarios = list_create();
     pcbs_generica = list_create();
     pcbs_stdin = list_create();
     pcbs_stdout = list_create();
@@ -18,6 +19,7 @@ void inicializar_listas() {
 void liberar_listas() {
     list_destroy(pcbs_new);
     list_destroy(pcbs_ready);
+    list_destroy(pcbs_ready_prioritarios);
     list_destroy(pcbs_exec);
     list_destroy(pcbs_generica);
     list_destroy(pcbs_stdin);

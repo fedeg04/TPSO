@@ -19,29 +19,13 @@ void leer_consola(void* args_void)
        if (!strcmp(leido, "")) {
            break;
        }
-       pthread_t hilo_procesar_instruccion;
-       procesar_instruccion_t* args_procesar_instruccion = malloc(sizeof(procesar_instruccion_t));
-       args_procesar_instruccion->leido = leido;
-       args_procesar_instruccion->logger = logger;
-       args_procesar_instruccion->socket = socket;
-       pthread_create(&hilo_procesar_instruccion, NULL, (void*) procesar_instruccion, (void*) args_procesar_instruccion);
-       pthread_detach(hilo_procesar_instruccion);
-       //procesar_instruccion(leido, logger, socket);
-       //free(leido);
-       //free(args_procesar_instruccion);
+       procesar_instruccion(leido, logger, socket);
+       free(leido);
    }
    free(leido);
 }
 
-void procesar_instruccion(void* args_void) {
-
-
-    
-    procesar_instruccion_t* args = (procesar_instruccion_t*) args_void;
-    t_log* logger = args->logger;
-    int socket = args->socket;
-    char* instruccion = args->leido;
-    free(args);
+void procesar_instruccion(char* instruccion, t_log* logger, int socket) {  
     log_info(logger, "INSTRUCCION: %s", instruccion);
     char** substrings = string_split(instruccion, " ");
     char* comando = substrings[0];
@@ -63,7 +47,12 @@ void procesar_instruccion(void* args_void) {
         log_info(logger, "PID: %d", pid);
         if(pid != 0) {
             proceso_t* proceso = crear_pcb(pid);
-            planificar_nuevo_proceso(proceso, logger);
+            pthread_t hilo_proceso;
+            nuevo_proceso_t* new_proceso = malloc(sizeof(nuevo_proceso_t));
+            new_proceso->proceso = proceso;
+            new_proceso->logger = logger;
+            pthread_create(&hilo_proceso, NULL, (void*) planificar_nuevo_proceso, (void*) new_proceso);
+            pthread_detach(hilo_proceso);
         }
         free(path_proceso);
         }
@@ -94,7 +83,7 @@ void procesar_instruccion(void* args_void) {
 
 void enviar_inicio_proceso(int socket, char* path, t_log* logger) {
     log_info(logger, "PATH: %s", path);
-    void* stream = malloc(sizeof(op_code) + string_length(path) + 1);
+    void* stream = malloc(sizeof(op_code) + 2* sizeof(uint32_t) + string_length(path) + 1);
     int offset = 0;
     agregar_opcode(stream, &offset, INICIAR_PROCESO);
     agregar_string(stream, &offset, path);
@@ -116,13 +105,7 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
             linea[leidos - 1] = '\0';
         }
         log_info(logger, "LINEA: %s", linea);
-        procesar_instruccion_t* args_procesar_instruccion = malloc(sizeof(procesar_instruccion_t));
-        args_procesar_instruccion->leido = linea;
-        args_procesar_instruccion->logger = logger;
-        args_procesar_instruccion->socket = socket;
-        pthread_t hilo_procesar_instruccion;
-        pthread_create(&hilo_procesar_instruccion, NULL, (void*) procesar_instruccion, (void*) args_procesar_instruccion);
-        pthread_detach(hilo_procesar_instruccion);
+        procesar_instruccion(linea, logger, socket);
     }
 
     fclose(f);

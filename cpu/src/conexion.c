@@ -53,6 +53,7 @@ void procesar_conexion_dispatch(void* args_void) {
                         free(pcb->registros);
                         free(pcb);
                         free(instruccion);
+
                         break;
                     }
                     ejecutar_instruccion(instruccion, logger, pcb->pid);

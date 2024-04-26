@@ -8,6 +8,7 @@
 #include <../include/consola.h>
 #include <pthread.h>
 #include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 
 char* puerto_memoria;
 char* ip_memoria;
@@ -24,6 +25,7 @@ char* algoritmo_planificacion;
 int grado_multiprogramacion;
 t_list* pcbs_new;
 t_list* pcbs_ready;
+t_list* pcbs_ready_prioritarios;
 t_list* pcbs_exec;
 t_list* pcbs_generica;
 t_list* pcbs_stdin;
@@ -33,10 +35,8 @@ t_list** pcbs_recursos;
 int procesos_activos;
 uint32_t pid_siguiente;
 int cpu_dispatch_fd;
+int cpu_interrupt_fd;
 int memoria_interrupt_fd;
-
-
-
-
+t_dictionary* diccionario_interfaces;
 
 #endif
