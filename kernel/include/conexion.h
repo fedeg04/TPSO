@@ -3,11 +3,9 @@
 
 #include <../include/sockets.h>
 #include <../include/protocolo.h>
+#include <../include/registros.h>
 
 void procesar_conexion(void* args);
-void conectar_generica();
-void conectar_stdin();
-void conectar_stdout();
-void conectar_dialfs();
+void conectar_interfaz(char* interfaz, int socket);
 
 #endif

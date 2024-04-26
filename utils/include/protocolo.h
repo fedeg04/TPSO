@@ -32,6 +32,10 @@ typedef enum {
     INTERRUMPIR,
     FETCH,
     DATOS_PCB,
+    GENERICA_BYE,
+    STDIN_BYE,
+    STDOUT_BYE,
+    DIALFS_BYE,
     MSG
 } op_code;
 
