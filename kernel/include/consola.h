@@ -22,15 +22,11 @@ typedef struct {
     int socket;
 } leer_consola_t;
 
-typedef struct {
-    t_log* logger;
-    int socket;
-    char *leido;
-} procesar_instruccion_t;
+
 
 //pthread_t hilo_procesar_instruccion;
 void leer_consola(void* args_void);
-void procesar_instruccion(void* args_void);
+void procesar_instruccion(char* instruccion, t_log* logger, int socket);
 void empezar_hilo_consola(pthread_t* hilo_consola, t_log* logger,int socket);
 void enviar_inicio_proceso(int socket, char* path, t_log* logger);
 void ejecutar_script(char* path, t_log* logger, int socket);

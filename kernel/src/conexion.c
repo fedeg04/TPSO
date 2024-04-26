@@ -16,18 +16,32 @@ void procesar_conexion(void* args_void) {
         switch(opcode) {
             case GENERICA:
                 log_info(logger, "Se conectó la interfaz genérica");
-                conectar_generica();
+                conectar_interfaz("GENERICA", socket_cliente);
                 break;
             case STDIN:
-                conectar_stdin();
+                conectar_interfaz("STDIN", socket_cliente);
                 break;
             case STDOUT:
-                conectar_stdout();
+                conectar_interfaz("STDOUT", socket_cliente);
                 break;
             case DIALFS:
-                conectar_dialfs();
+                conectar_interfaz("DIALFS", socket_cliente);
+                break;
+            case GENERICA_BYE:
+                log_info(logger, "Se desconect{o la genérica");
+                desconectar_interfaz("GENERICA");
+                break;
+            case STDIN_BYE:
+                desconectar_interfaz("STDIN");
+                break;
+            case STDOUT_BYE:
+                desconectar_interfaz("STDOUT");
+                break;
+            case DIALFS_BYE:
+                desconectar_interfaz("DIALFS");
                 break;
             case FIN_DE_SLEEP:
+                recibir_fin_de_sleep();
                 break;
             default:
                 uint32_t size_msg;
@@ -40,18 +54,10 @@ void procesar_conexion(void* args_void) {
     return;
 }
 
-void conectar_generica() {
-
+void conectar_interfaz(char* interfaz, int socket) {
+    dictionary_put(diccionario_interfaces, interfaz, (void*) socket);
 }
 
-void conectar_stdin() {
-    
-}
-
-void conectar_stdout() {
-    
-}
-
-void conectar_dialfs() {
-    
+void desconectar_interfaz(char* interfaz) {
+    dictionary_remove(diccionario_interfaces, interfaz);
 }

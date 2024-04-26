@@ -43,8 +43,6 @@ void procesar_conexion(void* args_void) {
 
                 archivo_proceso_t* primero = malloc(sizeof(archivo_proceso_t));
 
-                primero = list_get(archivos_procesos, 0);
-                log_info(logger, "Archivo: %s", primero->path);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
                 log_info(logger, "Instruccion: %s", instruccion);
                 enviar_instruccion(socket_cliente, instruccion);                            

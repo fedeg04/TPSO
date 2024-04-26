@@ -11,6 +11,7 @@ int main(int argc, char* argv[]) {
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
     inicializar_listas();
+    diccionario_interfaces = dictionary_create();
     pid_siguiente = 1;
     procesos_activos = 0;
 
@@ -20,7 +21,7 @@ int main(int argc, char* argv[]) {
     //Se conecta como cliente a la memoria (dispatch)
     int memoria_dispatch_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
     char* msg = "Kernel en Memoria";
-    void* stream = malloc(sizeof(uint32_t) + strlen(msg) + 1);
+    void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + strlen(msg) + 1);
     int offset = 0;
     agregar_opcode(stream, &offset, MSG);
     agregar_string(stream, &offset, msg);
@@ -31,13 +32,14 @@ int main(int argc, char* argv[]) {
     //Se conecta como cliente al CPU dispatch
     cpu_dispatch_fd = generar_conexion(logger_kernel, "CPU dispatch", ip_cpu, puerto_cpu_dispatch, config_kernel);
     char* msgCPU = "Kernel en CPU";
-    void* streamCPU = malloc(sizeof(uint32_t) + strlen(msgCPU) + 1);
+    void* streamCPU = malloc(sizeof(op_code) + sizeof(uint32_t) + strlen(msgCPU) + 1);
+    log_info(logger_kernel, "TAMAÑO: %d", sizeof(msgCPU));
     int offsetCPU = 0;
     agregar_opcode(streamCPU, &offsetCPU, MSG);
     agregar_string(streamCPU, &offsetCPU, msgCPU);
     send(cpu_dispatch_fd, streamCPU, offsetCPU, 0);
     //Se conecta como cliente al CPU interrupt
-    int cpu_interrupt_fd = generar_conexion(logger_kernel, "CPU interrupt", ip_cpu, puerto_cpu_interrupt, config_kernel);    
+    cpu_interrupt_fd = generar_conexion(logger_kernel, "CPU interrupt", ip_cpu, puerto_cpu_interrupt, config_kernel);    
     
     //Empieza el servidor
     int kernel_fd = iniciar_servidor(logger_kernel, puerto_escucha, "kernel");

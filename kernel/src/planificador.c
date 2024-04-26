@@ -1,7 +1,10 @@
 #include <../include/planificador.h>
 
-void planificar_nuevo_proceso(proceso_t* proceso, t_log* logger)
-{
+void planificar_nuevo_proceso(void* void_args) {
+    nuevo_proceso_t* args = (nuevo_proceso_t*) void_args;
+    proceso_t* proceso = args->proceso;
+    t_log* logger = args->logger;
+    free(args);
     list_add(pcbs_new, proceso);
     log_info(logger, "Se crea el proceso <%d> en NEW", proceso->pid);
     if(procesos_activos < grado_multiprogramacion)
@@ -31,17 +34,16 @@ void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     else if(!strcmp(algoritmo_planificacion, "RR") || !strcmp(algoritmo_planificacion, "VRR")) {
         t_temporal* timer = temporal_create();
         enviar_proceso_a_cpu(proceso);
-        pthread_t hilo_recepcion;
-        recepcion_proceso_t* args_recepcion = malloc(sizeof(recepcion_proceso_t));
-        args_recepcion->proceso = proceso;
-        args_recepcion->timer = timer;
-        args_recepcion->logger = logger;
-        pthread_create(&hilo_recepcion, NULL, (void*) esperar_llegada_de_proceso_pre_timer, (void*) args_recepcion);
-        sleep(quantum);
-        /// MANDAR INTERRUPCION
+        pthread_t hilo_interrupcion;
+        interrupcion_proceso_t* args_interrupcion = malloc(sizeof(interrupcion_proceso_t));
+        args_interrupcion->proceso = proceso;
+        args_interrupcion->timer = timer;
+        args_interrupcion->logger = logger;
+        pthread_create(&hilo_interrupcion, NULL, (void*) manejar_interrupcion_de_timer, (void*) args_interrupcion);
+        esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger);
+        esperar_contexto_de_ejecucion(proceso, logger);
+        pthread_detach(hilo_interrupcion);
     }
- 
-
 }
 
 void enviar_proceso_a_cpu(proceso_t* proceso)
@@ -90,15 +92,32 @@ void esperar_llegada_de_proceso_fifo(proceso_t* proceso, t_log* logger) {
     uint32_t quantum;
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
-
+    log_info(logger, "hola");
 }
 
-void esperar_llegada_de_proceso_pre_timer(void* args_void) {
-    recepcion_proceso_t* args = (recepcion_proceso_t*) args_void;
-    proceso_t* proceso = args->proceso;
-    t_temporal* timer = args->timer;
+void manejar_interrupcion_de_timer(void* args_void) {
+    interrupcion_proceso_t* args = (interrupcion_proceso_t*) args_void;
     t_log* logger = args->logger;
+    t_temporal* timer = args->timer;
+    proceso_t* proceso = args->proceso;
     free(args);
+    usleep(quantum);
+    temporal_stop(timer);
+    if(temporal_gettime(timer) >= quantum) {
+        mandar_fin_de_quantum_de(proceso);
+    }
+}
+
+void mandar_fin_de_quantum_de(proceso_t* proceso) {
+    void* stream = malloc(sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    agregar_opcode(stream, &offset, INTERRUMPIR);
+    agregar_uint32_t(stream, &offset, proceso->pid);
+    send(cpu_interrupt_fd, stream, offset, 0);
+    free(stream);
+}
+
+void esperar_llegada_de_proceso_rr_vrr(proceso_t* proceso, t_temporal* timer, t_log* logger) {
     uint32_t pid; 
     uint32_t quantum;  
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
@@ -117,7 +136,6 @@ void esperar_llegada_de_proceso_pre_timer(void* args_void) {
 
 void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
 {
-
     uint32_t PC;
     uint8_t AX;
     uint8_t BX;
@@ -236,6 +254,13 @@ void liberar_recursos_proceso(proceso_t* proceso, t_log* logger) {
 }
 
 void elegir_proceso_a_exec(t_log* logger) {
+    if(!list_is_empty(pcbs_ready_prioritarios)) {
+        proceso_t* proceso_a_exec_prior = list_remove(pcbs_ready_prioritarios, 0);
+        log_info(logger, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso_a_exec_prior->pid);
+            list_add(pcbs_exec, proceso_a_exec_prior);
+            list_remove_element(pcbs_ready_prioritarios,proceso_a_exec_prior);
+            ejecutar_proceso(proceso_a_exec_prior, logger);       
+    }
     if(!list_is_empty(pcbs_ready)) {
     proceso_t* proceso_a_exec = list_remove(pcbs_ready, 0);
         log_info(logger, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso_a_exec->pid);
@@ -252,4 +277,6 @@ void finalizar_proceso(proceso_t* proceso) {
     agregar_uint32_t(stream, &offset, proceso->pid);
     send(memoria_interrupt_fd, stream, offset, 0);
     free(stream);
+    free(proceso->registros);
+    free(proceso);
 }
