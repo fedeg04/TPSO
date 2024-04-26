@@ -38,7 +38,8 @@ void procesar_conexion_dispatch(void* args_void) {
             case ENVIAR_PCB:    
                 proceso_t* pcb = malloc(sizeof(proceso_t));  
                 pcb->registros = malloc(sizeof(registros_t));
-                recibir_pcb(socket_cliente, pcb);
+                recibir_pcb(socket_cliente, pcb, logger);
+                log_info(logger, "PCB->PC: %d", pcb->registros->PC);
                 memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
                 while (1)
                 {
@@ -158,7 +159,7 @@ void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
     free(stream);
 }
 
-void recibir_pcb(int socket, proceso_t* pcb) {
+void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
     uint32_t pid;
     uint32_t quantum;
     uint32_t PC;

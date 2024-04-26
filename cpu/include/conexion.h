@@ -10,7 +10,7 @@
 
 void procesar_conexion_interrupt(void* args);
 void procesar_conexion_dispatch(void* args);
-void recibir_pcb(int socket, proceso_t* pcb);
+void recibir_pcb(int socket, proceso_t* pcb, t_log* logger);
 extern int memoria_fd;
 extern registros_t* registros_cpu;
 extern proceso_t* pcb;
