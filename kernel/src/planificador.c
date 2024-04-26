@@ -27,7 +27,7 @@ void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     log_info(logger, "Algoritmo: %s", algoritmo_planificacion);
     if(!strcmp(algoritmo_planificacion, "FIFO")) {
         log_info(logger, "Se envia el proceso <%d> a CPU", proceso->pid);
-        enviar_proceso_a_cpu(proceso);
+        enviar_proceso_a_cpu(proceso, logger);
         esperar_llegada_de_proceso_fifo(proceso, logger);
         esperar_contexto_de_ejecucion(proceso, logger);
     }
@@ -46,7 +46,7 @@ void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     }
 }
 
-void enviar_proceso_a_cpu(proceso_t* proceso)
+void enviar_proceso_a_cpu(proceso_t* proceso, t_log* logger)
 {
     void* stream = malloc(sizeof(op_code) + 9 * sizeof(uint32_t) + 4 * sizeof(uint8_t));
     int offset = 0;

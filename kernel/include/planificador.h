@@ -16,7 +16,8 @@ typedef struct {
 
 void planificar_nuevo_proceso(void* void_args);
 void ejecutar_proceso(proceso_t* proceso, t_log* logger);
-void enviar_proceso_a_cpu(proceso_t* proceso);
+void enviar_proceso_a_cpu(proceso_t* proceso, t_log* logger);
+void enviar_proceso_a_cpu_con_timer(proceso_t* proceso, t_temporal* timer);
 void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger);
 void agregar_pcb(void* stream, int* offset, proceso_t* proceso);
 void esperar_llegada_de_proceso_fifo(proceso_t* proceso, t_log* logger);

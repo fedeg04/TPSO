@@ -16,9 +16,9 @@ void agregar_uint8_t(void* stream, int* offset, uint8_t uint8) {
 } 
 
 void agregar_string(void* stream, int* offset, char* string) {
-    int32_t tamanio = string_length(string)+1;
-    memcpy((char*) stream + (*offset), &tamanio, sizeof(uint32_t));
+    size_t tamanio = string_length(string) + 1;
+    memcpy(stream + (*offset), &tamanio, sizeof(uint32_t));
     *offset += sizeof(uint32_t);
     memcpy((char*) stream + (*offset), string, tamanio);
     *offset += tamanio;
-} 
+}
