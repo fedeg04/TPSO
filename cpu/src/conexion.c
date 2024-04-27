@@ -48,7 +48,6 @@ void procesar_conexion_dispatch(void* args_void) {
                     char* instruccion = recibir_instruccion(memoria_fd);
                     if(!ejecutar_instruccion(instruccion, logger, pcb, socket_cliente)) {
                         free(instruccion);
-
                         break;
                     }
                     //verificar_interrupcion();

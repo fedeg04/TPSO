@@ -33,7 +33,7 @@ void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     }
     else if(!strcmp(algoritmo_planificacion, "RR") || !strcmp(algoritmo_planificacion, "VRR")) {
         t_temporal* timer = temporal_create();
-        enviar_proceso_a_cpu(proceso);
+        enviar_proceso_a_cpu(proceso, logger);
         pthread_t hilo_interrupcion;
         interrupcion_proceso_t* args_interrupcion = malloc(sizeof(interrupcion_proceso_t));
         args_interrupcion->proceso = proceso;
@@ -180,6 +180,8 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     log_info(logger, "Motivo: %s", motivo_de_desalojo);
     char** substrings;
     char* instruccion_de_motivo_string;
+    if(motivo_de_desalojo[strlen(motivo_de_desalojo) -1] == '\n') motivo_de_desalojo[strlen(motivo_de_desalojo) -1] = '\0';
+    
     if(string_contains(motivo_de_desalojo, " ")){
         substrings = string_split(motivo_de_desalojo, " ");
         instruccion_de_motivo_string = substrings[0];
@@ -241,8 +243,9 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
             //case TIMER:
             default:
     }
-    free(motivo_de_desalojo);
-
+    if(string_contains(motivo_de_desalojo, " ")){
+        string_array_destroy(substrings);
+    }
 }
 
 void liberar_recursos_proceso(proceso_t* proceso, t_log* logger) {

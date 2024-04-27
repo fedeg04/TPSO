@@ -17,12 +17,13 @@ int main(int argc, char* argv[]) {
 
     archivos_procesos = list_create();
 
+    controlar_seniales(logger_memoria);
+
     //Empieza el servidor
     int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha, "memoria");
     while(server_escuchar(memoria_fd, logger_memoria, (procesar_conexion_func_t)procesar_conexion, "memoria"));
 
     terminar_programa(logger_memoria, config_memoria);
-    //TODO: liberar_archivos_procesos();
     return 0;
 }
 

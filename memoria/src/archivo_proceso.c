@@ -23,11 +23,10 @@ bool buscar_por_pid(archivo_proceso_t *archivo_proceso) {
 char* buscar_instruccion(uint32_t pid, uint32_t pc, t_list* archivos_procesos) {
     pid_a_buscar = pid;
 
-    archivo_proceso_t* archivo_proceso_encontrado = malloc(sizeof(archivo_proceso_t));
-
-    archivo_proceso_encontrado = list_find(archivos_procesos, (void*)buscar_por_pid);
+    archivo_proceso_t* archivo_proceso_encontrado = list_find(archivos_procesos, (void*)buscar_por_pid);
 
     FILE* f = fopen(archivo_proceso_encontrado->path, "r");
+    
     fseek(f, 0, SEEK_SET);
     char* instruccion = buscar_instruccion_en(f, pc);
     fclose(f);
@@ -47,4 +46,9 @@ char* buscar_instruccion_en(FILE* f, uint32_t pc) {
     // Cerrar el archivo y devolver la línea leída
     //fclose(f);
     return linea;
+}
+
+void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso) {
+    free(archivo_proceso->path);
+    free(archivo_proceso);
 }
