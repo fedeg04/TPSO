@@ -181,6 +181,8 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     log_info(logger, "Motivo: %s", motivo_de_desalojo);
     char** substrings;
     char* instruccion_de_motivo_string;
+    if(motivo_de_desalojo[strlen(motivo_de_desalojo) -1] == '\n') motivo_de_desalojo[strlen(motivo_de_desalojo) -1] = '\0';
+    
     if(string_contains(motivo_de_desalojo, " ")){
         substrings = string_split(motivo_de_desalojo, " ");
         instruccion_de_motivo_string = substrings[0];
@@ -243,9 +245,8 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
             default:
     }
     if(string_contains(motivo_de_desalojo, " ")){
-    string_array_destroy(substrings);
+        string_array_destroy(substrings);
     }
-    free(motivo_de_desalojo);
 
 }
 
