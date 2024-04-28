@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
     t_config* config_io = iniciar_config("io.config");
     get_config(config_io);
 
+    controlar_seniales(logger_io);
 // Se conecta al kernel
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
 
@@ -29,7 +30,6 @@ int main(int argc, char* argv[]) {
 
     conectar_a_kernel();
     atender_pedidos_kernel();
-    avisar_desconexion_kernel();
 
     terminar_programa(logger_io, config_io);
     liberar_conexion(memoria_fd);
@@ -95,27 +95,4 @@ void fin_de_sleep() {
     agregar_opcode(stream, &offset, FIN_DE_SLEEP);
     send(kernel_fd, stream, offset, 0);
     free(stream);
-}
-
-void avisar_desconexion_kernel() {
-    if(!strcmp("GENERICA", tipo_interfaz)) {
-        interfaz_desconectarse(GENERICA_BYE);
-   } 
-   if(!strcmp("STDIN", tipo_interfaz)) {
-    interfaz_desconectarse(STDIN_BYE);
-   } 
-   if(!strcmp("STDOUT", tipo_interfaz)) {
-    interfaz_desconectarse(STDOUT_BYE);  
-   } 
-   if(!strcmp("DIALFS", tipo_interfaz)) {
-    interfaz_desconectarse(DIALFS_BYE);  
-   } 
-}
-
-void interfaz_desconectarse(op_code code_interfaz) {
-    void* stream = sizeof(op_code);
-    int offset = 0;
-    agregar_opcode(stream, &offset, code_interfaz);
-    send(kernel_fd, stream, offset, 0);
-    free(stream);   
 }
