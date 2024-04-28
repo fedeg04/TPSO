@@ -2,7 +2,7 @@
 void enviar_proceso_io_gen_sleep(proceso_t* proceso,char* interfaz_sleep, uint32_t uni_de_trabajo) {
     if(!strcmp("GENERICA", interfaz_sleep)) {
         if(estaConectada("GENERICA")) {
-            proceso_sleep_t* proceso_a_sleep = malloc(sizeof(proceso_a_sleep));
+            proceso_sleep_t* proceso_a_sleep = malloc(sizeof(proceso_sleep_t));
             proceso_a_sleep->proceso = proceso;
             proceso_a_sleep->uni_de_trabajo = uni_de_trabajo;
             list_add(pcbs_generica, proceso_a_sleep);
@@ -29,6 +29,7 @@ void hacer_io_gen_sleep() {
     agregar_uint32_t(stream, &offset, proceso_a_sleep->uni_de_trabajo);
     int socket_generica = (int) dictionary_get(diccionario_interfaces, "GENERICA");
     send(socket_generica, stream, offset, 0);
+    free(stream);
 }
 
 void recibir_fin_de_sleep() {
@@ -44,5 +45,9 @@ void desbloquear_proceso(proceso_t* proceso) {
     }
     else {
         list_add(pcbs_ready_prioritarios, proceso);
+    }
+    if(list_is_empty(pcbs_exec)) {
+        list_add(pcbs_exec, proceso);
+        ejecutar_proceso(proceso, logger_kernel);
     }
 }

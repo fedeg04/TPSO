@@ -23,12 +23,6 @@ int main(int argc, char* argv[]) {
 
 // Se conecta al kernel
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
-    char* msg = "E/S en Kernel";
-    void* stream = malloc(sizeof(uint32_t) + strlen(msg) + 1);
-    uint32_t offset = 0;
-    agregar_opcode(stream, &offset, MSG);
-    agregar_string(stream, &offset, msg);
-    send(kernel_fd, stream, offset, 0);
 
     //Se conecta a la memoria
     int memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
@@ -45,9 +39,10 @@ int main(int argc, char* argv[]) {
 
 void conectar_a_kernel() {
   void* stream = malloc(sizeof(op_code));
-  int offset;
+  int offset = 0;
   agregar_opcode(stream, &offset, string_to_opcode(tipo_interfaz));
   send(kernel_fd, stream, offset, 0);  
+  free(stream);
 }
 
 void atender_pedidos_kernel() {
@@ -95,7 +90,7 @@ void dialfs_atender_kernel() {
 }
 
 void fin_de_sleep() {
-    void* stream = sizeof(op_code);
+    void* stream = malloc(sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, FIN_DE_SLEEP);
     send(kernel_fd, stream, offset, 0);

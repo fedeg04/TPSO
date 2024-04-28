@@ -36,7 +36,6 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
             if(existe_archivo(path_script)) {
                 ejecutar_script(path_script, logger, socket);
             }
-            free(path_script);
     }
     else if(!strcmp(comando, "INICIAR_PROCESO")) {
         
@@ -54,7 +53,6 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
             pthread_create(&hilo_proceso, NULL, (void*) planificar_nuevo_proceso, (void*) new_proceso);
             pthread_detach(hilo_proceso);
         }
-        free(path_proceso);
         }
     else if(!strcmp(comando, "FINALIZAR_PROCESO"))
     {
@@ -77,7 +75,7 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
 
     }
 
-    free(substrings);
+    string_array_destroy(substrings);
     //le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
 }
 

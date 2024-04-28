@@ -15,6 +15,7 @@ typedef struct {
     t_log* logger;
 } nuevo_proceso_t;
 
+extern t_log* logger_kernel;
 extern char* puerto_memoria;
 extern char* ip_memoria;
 extern char* puerto_cpu_dispatch;
@@ -50,5 +51,6 @@ void get_config(t_config* config);
 int cantidadDeRecursos(char** instancias_string);
 extern void finalizar_proceso(proceso_t* proceso);
 extern void recibir_fin_de_sleep();
+extern void ejecutar_proceso(proceso_t* proceso, t_log* logger);
 
 #endif

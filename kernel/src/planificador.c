@@ -70,20 +70,20 @@ void enviar_proceso_a_cpu(proceso_t* proceso, t_log* logger)
 
 void agregar_pcb(void* stream, int* offset, proceso_t* proceso)
 {
-    agregar_opcode(stream, &offset, ENVIAR_PCB);
-    agregar_uint32_t(stream, &offset, proceso->pid);
-    agregar_uint32_t(stream, &offset, proceso->quantum);
-    agregar_uint32_t(stream, &offset, proceso->registros->PC);
-    agregar_uint8_t(stream, &offset, proceso->registros->AX);
-    agregar_uint8_t(stream, &offset, proceso->registros->BX);
-    agregar_uint8_t(stream, &offset, proceso->registros->CX);
-    agregar_uint8_t(stream, &offset, proceso->registros->DX);
-    agregar_uint32_t(stream, &offset, proceso->registros->EAX);
-    agregar_uint32_t(stream, &offset, proceso->registros->EBX);
-    agregar_uint32_t(stream, &offset, proceso->registros->ECX);
-    agregar_uint32_t(stream, &offset, proceso->registros->EDX);
-    agregar_uint32_t(stream, &offset, proceso->registros->SI);
-    agregar_uint32_t(stream, &offset, proceso->registros->DI);
+    agregar_opcode(stream, offset, ENVIAR_PCB);
+    agregar_uint32_t(stream, offset, proceso->pid);
+    agregar_uint32_t(stream, offset, proceso->quantum);
+    agregar_uint32_t(stream, offset, proceso->registros->PC);
+    agregar_uint8_t(stream, offset, proceso->registros->AX);
+    agregar_uint8_t(stream, offset, proceso->registros->BX);
+    agregar_uint8_t(stream, offset, proceso->registros->CX);
+    agregar_uint8_t(stream, offset, proceso->registros->DX);
+    agregar_uint32_t(stream, offset, proceso->registros->EAX);
+    agregar_uint32_t(stream, offset, proceso->registros->EBX);
+    agregar_uint32_t(stream, offset, proceso->registros->ECX);
+    agregar_uint32_t(stream, offset, proceso->registros->EDX);
+    agregar_uint32_t(stream, offset, proceso->registros->SI);
+    agregar_uint32_t(stream, offset, proceso->registros->DI);
 }
 
 
@@ -136,6 +136,7 @@ void esperar_llegada_de_proceso_rr_vrr(proceso_t* proceso, t_temporal* timer, t_
 
 void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
 {
+    list_remove_element(pcbs_exec, proceso); //posteriormente deberia ser funcion liberar_cpu
     uint32_t PC;
     uint8_t AX;
     uint8_t BX;
@@ -246,6 +247,7 @@ void esperar_contexto_de_ejecucion(proceso_t* proceso, t_log* logger)
     if(string_contains(motivo_de_desalojo, " ")){
         string_array_destroy(substrings);
     }
+
 }
 
 void liberar_recursos_proceso(proceso_t* proceso, t_log* logger) {
