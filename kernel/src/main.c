@@ -7,7 +7,7 @@
 
 
 int main(int argc, char* argv[]) {
-    t_log* logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
+    logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
     inicializar_listas();

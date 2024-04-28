@@ -7,6 +7,7 @@
 #include <../include/serializacion.h>
 #include <../include/conversores.h>
 #include <commons/temporal.h>
+#include <commons/string.h>
 
 typedef struct {
     proceso_t* proceso;

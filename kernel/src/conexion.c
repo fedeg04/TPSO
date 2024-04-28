@@ -41,6 +41,7 @@ void procesar_conexion(void* args_void) {
                 desconectar_interfaz("DIALFS");
                 break;
             case FIN_DE_SLEEP:
+                log_info(logger, "VOlvió proceso de sleep");
                 recibir_fin_de_sleep();
                 break;
             default:

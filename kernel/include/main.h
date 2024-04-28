@@ -38,5 +38,6 @@ int cpu_dispatch_fd;
 int cpu_interrupt_fd;
 int memoria_interrupt_fd;
 t_dictionary* diccionario_interfaces;
+t_log* logger_kernel;
 
 #endif
