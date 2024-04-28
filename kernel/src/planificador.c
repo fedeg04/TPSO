@@ -23,6 +23,22 @@ void planificar_nuevo_proceso(void* void_args) {
     }
 }
 
+void ingresar_a_new(proceso_t* proceso){
+
+}
+
+void ingresar_a_ready(proceso_t* proceso) {
+
+}
+
+void ingresar_a_exec(proceso_t* proceso) {
+
+}
+
+void liberar_cpu(proceso_t* proceso){ 
+
+}
+
 void ejecutar_proceso(proceso_t* proceso, t_log* logger) {
     log_info(logger, "Algoritmo: %s", algoritmo_planificacion);
     if(!strcmp(algoritmo_planificacion, "FIFO")) {
@@ -284,4 +300,24 @@ void finalizar_proceso(proceso_t* proceso) {
     free(stream);
     free(proceso->registros);
     free(proceso);
+}
+
+void entrar_a_cola_generica(){ 
+
+}
+
+void entrar_a_cola_stdin() {
+
+}
+
+void entrar_a_cola_stdout() {
+
+}
+
+void entrar_a_cola_dialfs() {
+
+}
+
+void entrar_a_cola_recurso() {
+
 }
