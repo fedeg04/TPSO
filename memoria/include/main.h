@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <../include/init.h>
 #include <../include/conexion.h>
+#include <../include/seniales.h>
 
 char* puerto_escucha;
 int tam_memoria;

@@ -21,21 +21,15 @@ int main(int argc, char* argv[]) {
     t_config* config_io = iniciar_config("io.config");
     get_config(config_io);
 
+    controlar_seniales(logger_io);
 // Se conecta al kernel
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
-    char* msg = "E/S en Kernel";
-    void* stream = malloc(sizeof(uint32_t) + strlen(msg) + 1);
-    uint32_t offset = 0;
-    agregar_opcode(stream, &offset, MSG);
-    agregar_string(stream, &offset, msg);
-    send(kernel_fd, stream, offset, 0);
 
     //Se conecta a la memoria
     int memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
 
     conectar_a_kernel();
     atender_pedidos_kernel();
-    avisar_desconexion_kernel();
 
     terminar_programa(logger_io, config_io);
     liberar_conexion(memoria_fd);
@@ -45,9 +39,10 @@ int main(int argc, char* argv[]) {
 
 void conectar_a_kernel() {
   void* stream = malloc(sizeof(op_code));
-  int offset;
+  int offset = 0;
   agregar_opcode(stream, &offset, string_to_opcode(tipo_interfaz));
   send(kernel_fd, stream, offset, 0);  
+  free(stream);
 }
 
 void atender_pedidos_kernel() {
@@ -95,32 +90,9 @@ void dialfs_atender_kernel() {
 }
 
 void fin_de_sleep() {
-    void* stream = sizeof(op_code);
+    void* stream = malloc(sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, FIN_DE_SLEEP);
     send(kernel_fd, stream, offset, 0);
     free(stream);
-}
-
-void avisar_desconexion_kernel() {
-    if(!strcmp("GENERICA", tipo_interfaz)) {
-        interfaz_desconectarse(GENERICA_BYE);
-   } 
-   if(!strcmp("STDIN", tipo_interfaz)) {
-    interfaz_desconectarse(STDIN_BYE);
-   } 
-   if(!strcmp("STDOUT", tipo_interfaz)) {
-    interfaz_desconectarse(STDOUT_BYE);  
-   } 
-   if(!strcmp("DIALFS", tipo_interfaz)) {
-    interfaz_desconectarse(DIALFS_BYE);  
-   } 
-}
-
-void interfaz_desconectarse(op_code code_interfaz) {
-    void* stream = sizeof(op_code);
-    int offset = 0;
-    agregar_opcode(stream, &offset, code_interfaz);
-    send(kernel_fd, stream, offset, 0);
-    free(stream);   
 }

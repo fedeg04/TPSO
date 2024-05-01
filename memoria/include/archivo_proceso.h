@@ -14,5 +14,6 @@ bool existe_archivo(char* path);
 void agregar_proceso(t_list* archivos_procesos, char* path, uint32_t pid);
 char* buscar_instruccion(uint32_t pid, uint32_t pc, t_list* archivos_procesos);
 char* buscar_instruccion_en(FILE* f, uint32_t pc);
+void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso);
 
 #endif

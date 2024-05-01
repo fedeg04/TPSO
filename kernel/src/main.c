@@ -7,10 +7,11 @@
 
 
 int main(int argc, char* argv[]) {
-    t_log* logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
+    logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
     inicializar_listas();
+    inicializar_semaforos();
     diccionario_interfaces = dictionary_create();
     pid_siguiente = 1;
     procesos_activos = 0;
@@ -35,6 +36,7 @@ int main(int argc, char* argv[]) {
 
     pthread_join(hilo_consola, NULL);
     liberar_listas();
+    liberar_semaforos();
     terminar_programa(logger_kernel, config_kernel);
     liberar_conexion(memoria_dispatch_fd);
     liberar_conexion(memoria_interrupt_fd);
