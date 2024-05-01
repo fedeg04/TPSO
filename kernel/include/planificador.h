@@ -28,12 +28,15 @@ void elegir_proceso_a_exec(t_log* logger);
 void finalizar_proceso(proceso_t* proceso);
 void manejar_interrupcion_de_timer(void* args);
 void ingresar_a_new(proceso_t* proceso);
-void ingresar_a_ready(proceso_t* proceso);
-void ingresar_a_exec(proceso_t* proceso);
-void liberar_cpu(proceso_t* proceso);
+void ingresar_a_ready();
+void ingresar_a_exec();
+void ingresar_a_exit(proceso_t* proceso); 
+void liberar_cpu();
 void entrar_a_cola_generica();
 void entrar_a_cola_stdin();
 void entrar_a_cola_stdout();
 void entrar_a_cola_dialfs();
 void entrar_a_cola_recurso();
+proceso_t *obtenerSiguienteAReady();
+proceso_t *obtenerSiguienteAExec();
 #endif
