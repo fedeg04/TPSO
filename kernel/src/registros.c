@@ -78,6 +78,7 @@ void inicializar_semaforos()
     pthread_mutex_init(&mutex_stdin_list, NULL);
     pthread_mutex_init(&mutex_stdout_list, NULL);
     pthread_mutex_init(&mutex_dialfs_list, NULL);
+    pthread_mutex_init(&mutex_generica_exec, NULL);
     mutex_recursos_list = malloc(cantidad_recursos * sizeof(pthread_mutex_t));
     for (int i = 0; i < cantidad_recursos; i++)
     {
@@ -109,9 +110,10 @@ void liberar_semaforos()
     pthread_mutex_destroy(&mutex_stdin_list);
     pthread_mutex_destroy(&mutex_stdout_list);
     pthread_mutex_destroy(&mutex_dialfs_list);
+    pthread_mutex_destroy(&mutex_generica_exec);
     for (int i = 0; i < cantidad_recursos; i++)
     {
-        pthread_mutex_init(&mutex_recursos_list[cantidad_recursos], NULL);
+        pthread_mutex_destroy(&mutex_recursos_list[cantidad_recursos]);
     }
     free(mutex_recursos_list);
     sem_destroy(&multiprogramacion);

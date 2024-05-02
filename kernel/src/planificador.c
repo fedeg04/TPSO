@@ -64,9 +64,9 @@ proceso_t *obtenerSiguienteAReady()
 void ingresar_a_exec()
 {
     sem_wait(&pcb_esperando_exec);
-    proceso_t *proceso = obtenerSiguienteAExec();
 
     pthread_mutex_lock(&mutex_exec_list);
+    proceso_t *proceso = obtenerSiguienteAExec();
     list_add(pcbs_exec, (void *)proceso);
     log_info(logger_kernel, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso->pid);
     ejecutar_proceso(proceso, logger_kernel);
@@ -124,20 +124,7 @@ void enviar_proceso_a_cpu(proceso_t *proceso, t_log *logger)
 {
     void *stream = malloc(sizeof(op_code) + 9 * sizeof(uint32_t) + 4 * sizeof(uint8_t));
     int offset = 0;
-    agregar_opcode(stream, &offset, ENVIAR_PCB);
-    agregar_uint32_t(stream, &offset, proceso->pid);
-    agregar_uint32_t(stream, &offset, proceso->quantum);
-    agregar_uint32_t(stream, &offset, proceso->registros->PC);
-    agregar_uint8_t(stream, &offset, proceso->registros->AX);
-    agregar_uint8_t(stream, &offset, proceso->registros->BX);
-    agregar_uint8_t(stream, &offset, proceso->registros->CX);
-    agregar_uint8_t(stream, &offset, proceso->registros->DX);
-    agregar_uint32_t(stream, &offset, proceso->registros->EAX);
-    agregar_uint32_t(stream, &offset, proceso->registros->EBX);
-    agregar_uint32_t(stream, &offset, proceso->registros->ECX);
-    agregar_uint32_t(stream, &offset, proceso->registros->EDX);
-    agregar_uint32_t(stream, &offset, proceso->registros->SI);
-    agregar_uint32_t(stream, &offset, proceso->registros->DI);
+    agregar_pcb(stream, &offset, proceso);
     send(cpu_dispatch_fd, stream, offset, 0);
     free(stream);
 }

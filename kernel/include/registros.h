@@ -48,6 +48,7 @@ extern pthread_mutex_t* mutex_ready_prioritario_list;
 extern pthread_mutex_t* mutex_exec_list;
 extern pthread_mutex_t* mutex_exit_queue;
 extern pthread_mutex_t* mutex_generica_list;
+extern pthread_mutex_t* mutex_generica_exec;
 extern pthread_mutex_t* mutex_stdin_list;
 extern pthread_mutex_t* mutex_stdout_list;
 extern pthread_mutex_t* mutex_dialfs_list;
