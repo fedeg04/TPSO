@@ -16,7 +16,7 @@ void get_config(t_config* config) {
 }
 
 int main(int argc, char* argv[]) {
-    t_log* logger_io = iniciar_logger("io.log", "I/O: ");
+    logger_io = iniciar_logger("io.log", "I/O: ");
     log_info(logger_io, "%s", argv[1]); // ./bin/entradasalida "unpath"
     t_config* config_io = iniciar_config("io.config");
     get_config(config_io);
@@ -65,11 +65,15 @@ void generica_atender_kernel() {
     while(1) {
         op_code opcode;
         recv(kernel_fd, &opcode, sizeof(op_code), 0);
+        log_info(logger_io, "LLegue");
         switch(opcode) {
             case IO_GEN_SLEEP:
             uint32_t unis_de_trabajo;
             recv(kernel_fd, &unis_de_trabajo, sizeof(op_code), 0);
-            usleep(tiempo_unidad_trabajo * (int) unis_de_trabajo);
+            log_info(logger_io, "TIEMPO UNI: %d", tiempo_unidad_trabajo);
+            log_info(logger_io, "UNIS: %d", unis_de_trabajo);
+            usleep(tiempo_unidad_trabajo * unis_de_trabajo);
+            log_info(logger_io, "LLegue sleep");
             fin_de_sleep();
                 break;
             default:
@@ -94,5 +98,6 @@ void fin_de_sleep() {
     int offset = 0;
     agregar_opcode(stream, &offset, FIN_DE_SLEEP);
     send(kernel_fd, stream, offset, 0);
+    log_info(logger_io, "LLegue x2");
     free(stream);
 }
