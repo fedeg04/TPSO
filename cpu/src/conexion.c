@@ -1,5 +1,7 @@
 #include <../include/conexion.h>
 
+uint32_t pid_interrumpido;
+
 void procesar_conexion_interrupt(void* args_void) {
     conexion_args_t* args = (conexion_args_t*) args_void;
     int socket_cliente = args->socket_cliente;
@@ -15,6 +17,7 @@ void procesar_conexion_interrupt(void* args_void) {
 
         switch(opcode) {
             case INTERRUMPIR:
+                pid_interrumpido = recibir_interrupcion(socket_cliente);
             default:
                
         }
@@ -50,9 +53,14 @@ void procesar_conexion_dispatch(void* args_void) {
                         free(instruccion);
                         break;
                     }
-                    //verificar_interrupcion();
                     registros_cpu->PC++;
                     free(instruccion);
+                    if(hay_interrupcion(pcb->pid)){
+                        enviar_contexto(socket_cliente, pcb, "TIMER");
+                        pid_interrumpido = -1;
+                        break;
+                    }
+                    pid_interrumpido = -1;
                 }
                 free(pcb->registros);
                 free(pcb);
@@ -124,8 +132,12 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
         case SIGNAL:
         return 1;
         case IO_GEN_SLEEP:
+            registro_orig = substrings[1];
+            registro_dest = substrings[2];
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_orig, registro_dest);
+            registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
-            return 1;
+            return 0;
         case IO_STDIN_READ:
         return 1;
         case IO_STDOUT_WRITE:
@@ -141,12 +153,15 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
         case IO_FS_READ:
         return 1;
         case EXIT:
-            memcpy(pcb->registros, registros_cpu, sizeof(register_t));
             log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
             enviar_contexto(socket, pcb, instruccion);
             return 0;
     }
     string_split_free(&substrings);
+}
+
+bool hay_interrupcion(uint32_t pid) {
+    return pid_interrumpido == pid;
 }
 
 void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
@@ -209,7 +224,14 @@ char* recibir_instruccion(int socket) {
     return instruccion;
 }
 
+uint32_t recibir_interrupcion(int socket) {
+    uint32_t pid_interrumpido_recv; 
+    recv(socket, &pid_interrumpido_recv, sizeof(uint32_t), 0); 
+    return pid_interrumpido_recv;
+}
+
 void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
+    memcpy(pcb->registros, registros_cpu, sizeof(register_t));
     uint32_t tamanio = string_length(instruccion) + 1;
     void* stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
     int offset = 0;

@@ -37,6 +37,8 @@ void entrar_a_cola_stdin();
 void entrar_a_cola_stdout();
 void entrar_a_cola_dialfs();
 void entrar_a_cola_recurso();
+void mostrar_pids_ready(t_list* ready_list, char* cola);
+uint32_t _get_pid(proceso_t* proceso);
 proceso_t *obtenerSiguienteAReady();
 proceso_t *obtenerSiguienteAExec();
 #endif

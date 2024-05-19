@@ -31,4 +31,5 @@ op_code string_to_opcode(char* string) {
     else if (strcmp(string, "FETCH") == 0) return FETCH;
     else if (strcmp(string, "DATOS_PCB") == 0) return DATOS_PCB;
     else if (strcmp(string, "MSG") == 0) return MSG;
+    else if (strcmp(string, "TIMER") == 0) return TIMER;
 }

@@ -105,7 +105,6 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
         log_info(logger, "LINEA: %s", linea);
         procesar_instruccion(linea, logger, socket);
     }
-
     fclose(f);
 }
 

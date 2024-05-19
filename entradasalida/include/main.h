@@ -8,6 +8,7 @@
 #include <../include/serializacion.h>
 #include <../include/seniales.h>
 
+t_log* logger_io;
 char* tipo_interfaz;
 int tiempo_unidad_trabajo;
 char* puerto_memoria;
