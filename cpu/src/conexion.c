@@ -88,7 +88,6 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
 
     switch(opcode) {
         case SET:
-            sleep(1);
             registro_dest = substrings[1];
             valor_dest = atoi(substrings[2]);
             set_registros(registro_dest, valor_dest);
