@@ -65,14 +65,14 @@ void generica_atender_kernel() {
     while(1) {
         op_code opcode;
         recv(kernel_fd, &opcode, sizeof(op_code), 0);
-        log_info(logger_io, "LLegue");
         switch(opcode) {
             case IO_GEN_SLEEP:
             uint32_t unis_de_trabajo;
             recv(kernel_fd, &unis_de_trabajo, sizeof(op_code), 0);
             log_info(logger_io, "TIEMPO UNI: %d", tiempo_unidad_trabajo);
             log_info(logger_io, "UNIS: %d", unis_de_trabajo);
-            usleep(tiempo_unidad_trabajo * unis_de_trabajo);
+            log_info(logger_io, "TOTAL: %d", unis_de_trabajo * tiempo_unidad_trabajo);
+            usleep(tiempo_unidad_trabajo * unis_de_trabajo * 1000);
             log_info(logger_io, "LLegue sleep");
             fin_de_sleep();
                 break;
@@ -98,6 +98,6 @@ void fin_de_sleep() {
     int offset = 0;
     agregar_opcode(stream, &offset, FIN_DE_SLEEP);
     send(kernel_fd, stream, offset, 0);
-    log_info(logger_io, "LLegue x2");
+    log_info(logger_io, "STREAM: %d", *((int*) stream));
     free(stream);
 }

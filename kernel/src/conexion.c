@@ -8,11 +8,11 @@ void procesar_conexion(void* args_void) {
 
     op_code opcode;
     while (socket_cliente != 1) {
-        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
+        if ((recv(socket_cliente, &opcode, sizeof(op_code), 0)) != sizeof(op_code)){
             log_info(logger, "Tiro error");
             return;
         }
-
+        log_info(logger_kernel, "OPCODE: %d", opcode);
         switch(opcode) {
             case GENERICA:
                 log_info(logger, "Se conectó la interfaz genérica");
@@ -41,17 +41,13 @@ void procesar_conexion(void* args_void) {
                 desconectar_interfaz("DIALFS");
                 break;
             case FIN_DE_SLEEP:
-                log_info(logger, "VOlvió proceso de sleep");
-                recibir_fin_de_sleep();
+                log_info(logger, "VOLVIO PROCESO DE HACER SLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP");
+                sem_post(&vuelta_io_gen_sleep);
                 break;
             default:
-                uint32_t size_msg;
-                recv(socket_cliente, &size_msg, sizeof(uint32_t), 0);
-                void* msg = malloc(size_msg);
-                recv(socket_cliente, msg, size_msg, 0);
-                //log_info(logger, "%s", msg);
         }
     }
+    log_info(logger_kernel, "desconectado por bobi");
     return;
 }
 

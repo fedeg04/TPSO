@@ -92,6 +92,7 @@ void inicializar_semaforos()
     sem_init(&pcb_esperando_stdin, 0, 0);
     sem_init(&pcb_esperando_stdout, 0, 0);
     sem_init(&pcb_esperando_dialfs, 0, 0);
+    sem_init(&vuelta_io_gen_sleep, 0, 0);
     pcb_esperando_recurso = malloc(cantidad_recursos * sizeof(sem_t));
     for (int i = 0; i < cantidad_recursos; i++)
     {
@@ -124,6 +125,7 @@ void liberar_semaforos()
     sem_destroy(&pcb_esperando_stdin);
     sem_destroy(&pcb_esperando_stdout);
     sem_destroy(&pcb_esperando_dialfs);
+    sem_destroy(&vuelta_io_gen_sleep);
     for (int i = 0; i < cantidad_recursos; i++)
     {
         sem_destroy(&pcb_esperando_recurso[cantidad_recursos]);
