@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <commons/collections/list.h>
-#include <../include/main.h>
 
 typedef struct {
     char* path;
