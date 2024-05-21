@@ -42,6 +42,7 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &pc, sizeof(uint32_t), 0);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
                 log_info(logger, "Instruccion: %s", instruccion);
+                log_info(logger, "IRetardo: %d", retardo_respuesta);
                 usleep(retardo_respuesta * 1000);
                 enviar_instruccion(socket_cliente, instruccion);
                 free(instruccion);
