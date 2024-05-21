@@ -5,7 +5,7 @@ void get_config(t_config* config) {
     tam_memoria = config_get_int_value(config, "TAM_MEMORIA");
     tam_pagina = config_get_int_value(config, "TAM_PAGINA");
     path_instrucciones = config_get_string_value(config, "PATH_INSTRUCCIONES");
-    retardo_respuesta = config_get_string_value(config, "RETARDO_RESPUESTA");
+    retardo_respuesta = config_get_int_value(config, "RETARDO_RESPUESTA");
 
 }
 
