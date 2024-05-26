@@ -74,7 +74,9 @@ proceso_t *obtenerSiguienteAExec()
     proceso_t *pcb;
     if (!list_is_empty(pcbs_ready_prioritarios))
     {
-        // TODO: cuando hagamos VRR lo vemos
+        pthread_mutex_lock(&mutex_ready_prioritario_list);
+        pcb = list_remove(pcbs_ready_prioritarios, 0);
+        pthread_mutex_unlock(&mutex_ready_prioritario_list);
     }
     else
     {
@@ -199,8 +201,8 @@ void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_
         {
             proceso->quantum = quantum;
         }
-        temporal_destroy(timer);
     }
+    temporal_destroy(timer);
 }
 
 void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)

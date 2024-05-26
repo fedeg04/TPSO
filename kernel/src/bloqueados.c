@@ -3,10 +3,10 @@ void enviar_proceso_io_gen_sleep(proceso_t *proceso, char *interfaz_sleep, uint3
 {
     if (!strcmp("GENERICA", interfaz_sleep))
     {
-        pthread_mutex_lock(&mutex_generica_list);
         proceso_sleep_t* proceso_a_sleep = malloc(sizeof(proceso_sleep_t));
         proceso_a_sleep->proceso = proceso;
         proceso_a_sleep->uni_de_trabajo = uni_de_trabajo;
+        pthread_mutex_lock(&mutex_generica_list);
         list_add(pcbs_generica, proceso_a_sleep);
         pthread_mutex_unlock(&mutex_generica_list);
         sem_post(&pcb_esperando_generica);
