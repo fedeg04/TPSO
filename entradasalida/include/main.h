@@ -6,7 +6,9 @@
 #include <../include/init.h>
 #include <../include/protocolo.h>
 #include <../include/serializacion.h>
+#include <../include/seniales.h>
 
+t_log* logger_io;
 char* tipo_interfaz;
 int tiempo_unidad_trabajo;
 char* puerto_memoria;
@@ -24,7 +26,6 @@ void stdin_atender_kernel();
 void stdout_atender_kernel();
 void dialfs_atender_kernel();
 void fin_de_sleep();
-void interfaz_desconectarse(op_code code_interfaz);
 
 
 

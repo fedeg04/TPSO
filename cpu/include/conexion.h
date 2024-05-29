@@ -22,6 +22,4 @@ uint32_t get_valor_registro(char* registro);
 void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket);
 bool hay_interrupcion(uint32_t pid);
 
-uint32_t pid_interrumpido;
-
 #endif

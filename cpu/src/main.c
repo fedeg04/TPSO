@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     cpu_interrupt_fd = iniciar_servidor(logger_cpu, puerto_escucha_interrupt, "CPU interrupt");
     while (servers_escuchar());
 
-    // TODO: ver como sincronizazr el comienzo de cada server y del cliente.
+    // TODO: ver como sincronizar el comienzo de cada server y del cliente.
 
     liberar_conexion(memoria_fd);
     terminar_programa(logger_cpu, config_cpu);

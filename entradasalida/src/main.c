@@ -16,11 +16,12 @@ void get_config(t_config* config) {
 }
 
 int main(int argc, char* argv[]) {
-    t_log* logger_io = iniciar_logger("io.log", "I/O: ");
+    logger_io = iniciar_logger("io.log", "I/O: ");
     log_info(logger_io, "%s", argv[1]); // ./bin/entradasalida "unpath"
     t_config* config_io = iniciar_config("io.config");
     get_config(config_io);
 
+    controlar_seniales(logger_io);
 // Se conecta al kernel
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
 
@@ -29,7 +30,6 @@ int main(int argc, char* argv[]) {
 
     conectar_a_kernel();
     atender_pedidos_kernel();
-    avisar_desconexion_kernel();
 
     terminar_programa(logger_io, config_io);
     liberar_conexion(memoria_fd);
@@ -69,7 +69,11 @@ void generica_atender_kernel() {
             case IO_GEN_SLEEP:
             uint32_t unis_de_trabajo;
             recv(kernel_fd, &unis_de_trabajo, sizeof(op_code), 0);
-            usleep(tiempo_unidad_trabajo * (int) unis_de_trabajo);
+            log_info(logger_io, "TIEMPO UNI: %d", tiempo_unidad_trabajo);
+            log_info(logger_io, "UNIS: %d", unis_de_trabajo);
+            log_info(logger_io, "TOTAL: %d", unis_de_trabajo * tiempo_unidad_trabajo);
+            usleep(tiempo_unidad_trabajo * unis_de_trabajo * 1000);
+            log_info(logger_io, "LLegue sleep");
             fin_de_sleep();
                 break;
             default:
@@ -94,28 +98,6 @@ void fin_de_sleep() {
     int offset = 0;
     agregar_opcode(stream, &offset, FIN_DE_SLEEP);
     send(kernel_fd, stream, offset, 0);
+    log_info(logger_io, "STREAM: %d", *((int*) stream));
     free(stream);
-}
-
-void avisar_desconexion_kernel() {
-    if(!strcmp("GENERICA", tipo_interfaz)) {
-        interfaz_desconectarse(GENERICA_BYE);
-   } 
-   if(!strcmp("STDIN", tipo_interfaz)) {
-    interfaz_desconectarse(STDIN_BYE);
-   } 
-   if(!strcmp("STDOUT", tipo_interfaz)) {
-    interfaz_desconectarse(STDOUT_BYE);  
-   } 
-   if(!strcmp("DIALFS", tipo_interfaz)) {
-    interfaz_desconectarse(DIALFS_BYE);  
-   } 
-}
-
-void interfaz_desconectarse(op_code code_interfaz) {
-    void* stream = sizeof(op_code);
-    int offset = 0;
-    agregar_opcode(stream, &offset, code_interfaz);
-    send(kernel_fd, stream, offset, 0);
-    free(stream);   
 }
