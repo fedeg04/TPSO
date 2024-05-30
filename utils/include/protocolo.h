@@ -37,6 +37,7 @@ typedef enum {
     STDOUT_BYE,
     DIALFS_BYE,
     TIMER,
+    OUTOFMEMORY,
     MSG
 } op_code;
 

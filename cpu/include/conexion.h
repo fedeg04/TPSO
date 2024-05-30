@@ -13,7 +13,6 @@ void procesar_conexion_dispatch(void* args);
 void recibir_pcb(int socket, proceso_t* pcb, t_log* logger);
 extern int memoria_fd;
 extern registros_t* registros_cpu;
-extern proceso_t* pcb;
 char* recibir_instruccion(int socket);
 uint32_t recibir_interrupcion(int socket);
 int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int socket);
