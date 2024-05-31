@@ -96,7 +96,13 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
         case MOV_IN:
         return 1;
         case MOV_OUT:
-        return 1;
+            registro_dest = substrings[1];
+            registro_orig = substrings[2];
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
+            //uint16_t pagina = pagina_direccion_logica(registro_dest);
+            //uint16_t desplazamiento = desplazamiento_direccion_logica(registro_dest);
+
+            return 1;
         case SUM:
             registro_dest = substrings[1];
             registro_orig = substrings[2];

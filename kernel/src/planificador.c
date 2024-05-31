@@ -386,8 +386,7 @@ void elegir_proceso_a_exec(t_log *logger)
     }
 }
 
-void finalizar_proceso(proceso_t *proceso)
-{
+void finalizar_proceso(proceso_t *proceso){
     void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
     int offset = 0;
     agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
