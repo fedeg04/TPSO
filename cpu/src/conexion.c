@@ -143,9 +143,11 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
         case COPY_STRING:
         return 1;
         case WAIT:
-        return 1;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case SIGNAL:
-        return 1;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case IO_GEN_SLEEP:
             registro_orig = substrings[1];
             registro_dest = substrings[2];
