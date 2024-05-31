@@ -374,8 +374,7 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
 
 
 
-void finalizar_proceso(proceso_t *proceso)
-{
+void finalizar_proceso(proceso_t *proceso){
     void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
     int offset = 0;
     agregar_opcode(stream, &offset, FINALIZAR_PROCESO);

@@ -96,7 +96,13 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
         case MOV_IN:
         return 1;
         case MOV_OUT:
-        return 1;
+            registro_dest = substrings[1];
+            registro_orig = substrings[2];
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
+            //uint16_t pagina = pagina_direccion_logica(registro_dest);
+            //uint16_t desplazamiento = desplazamiento_direccion_logica(registro_dest);
+
+            return 1;
         case SUM:
             registro_dest = substrings[1];
             registro_orig = substrings[2];
@@ -124,13 +130,24 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
             }
         return 1;
         case RESIZE:
-        return 1;
+            valor_dest = atoi(substrings[1]);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, valor_dest);
+            enviar_resize(valor_dest, pcb->pid);     
+            op_code resize_response;
+            recv(memoria_fd, &resize_response, sizeof(op_code), 0);
+            if(resize_response == OUTOFMEMORY) {
+                enviar_contexto(socket, pcb, OUTOFMEMORY);
+                return 0;
+            }
+            return 1;
         case COPY_STRING:
         return 1;
         case WAIT:
-        return 1;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case SIGNAL:
-        return 1;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case IO_GEN_SLEEP:
             registro_orig = substrings[1];
             registro_dest = substrings[2];
@@ -304,4 +321,14 @@ uint32_t get_valor_registro(char* registro) {
     } else if (strcmp(registro, "DI") == 0) {
         return registros_cpu->DI;
     }
+}
+
+void enviar_resize(uint32_t tamanio, uint32_t pid) {
+    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(op_code));
+    int offset = 0;
+    agregar_opcode(stream, &offset, RESIZE);
+    agregar_uint32_t(stream, &offset, tamanio);
+    agregar_uint32_t(stream, &offset, pid);
+    send(memoria_fd, stream, offset, 0);
+    free(stream);
 }
