@@ -21,10 +21,8 @@ bool buscar_por_pid(archivo_proceso_t *archivo_proceso) {
 }
 
 char* buscar_instruccion(uint32_t pid, uint32_t pc, t_list* archivos_procesos) {
-    pid_a_buscar = pid;
-
-    archivo_proceso_t* archivo_proceso_encontrado = list_find(archivos_procesos, (void*)buscar_por_pid);
-
+    archivo_proceso_t* archivo_proceso_encontrado = archivo_proceso_por_pid(pid, archivos_procesos);
+    
     FILE* f = fopen(archivo_proceso_encontrado->path, "r");
     
     fseek(f, 0, SEEK_SET);
@@ -32,6 +30,11 @@ char* buscar_instruccion(uint32_t pid, uint32_t pc, t_list* archivos_procesos) {
     fclose(f);
     return instruccion;
 }
+
+archivo_proceso_t* archivo_proceso_por_pid(uint32_t pid, t_list* archivos_procesos){
+    pid_a_buscar = pid;
+    return list_find(archivos_procesos, (void*)buscar_por_pid);
+} 
 
 char* buscar_instruccion_en(FILE* f, uint32_t pc) {
     char* linea;
@@ -51,4 +54,9 @@ char* buscar_instruccion_en(FILE* f, uint32_t pc) {
 void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso) {
     free(archivo_proceso->path);
     free(archivo_proceso);
+}
+
+void eliminar_archivo_proceso(t_list* archivos_procesos, uint32_t pid_a_finalizar){
+    archivo_proceso_t* archivo_proceso = archivo_proceso_por_pid(pid_a_finalizar, archivos_procesos);
+    archivo_proceso_destroy(archivo_proceso);
 }

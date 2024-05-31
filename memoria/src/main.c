@@ -10,12 +10,18 @@ void get_config(t_config* config) {
 }
 
 int main(int argc, char* argv[]) {
-    
+
     t_log* logger_memoria = iniciar_logger("memoria.log", "MEMORIA: ");
     t_config* config_memoria = iniciar_config("memoria.config");
     get_config(config_memoria);
 
     archivos_procesos = list_create();
+    //PAGINAS
+    tablas_paginas_memoria = list_create();
+    int cant_marcos = cantidad_marcos();
+    char* bitarray = malloc((cant_marcos+7)/8);
+    memset(bitarray, 0, sizeof(bitarray));
+    bitarray_tabla = bitarray_create(bitarray,(cant_marcos+7)/8);
 
     controlar_seniales(logger_memoria);
 
@@ -26,4 +32,3 @@ int main(int argc, char* argv[]) {
     terminar_programa(logger_memoria, config_memoria);
     return 0;
 }
-
