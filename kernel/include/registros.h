@@ -11,12 +11,28 @@
 #include <commons/log.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/queue.h>
+#include <commons/temporal.h>
 #include <semaphore.h>
 
 typedef struct {
     proceso_t* proceso;
     t_log* logger;
 } nuevo_proceso_t;
+
+typedef struct {
+    proceso_t* proceso;
+    uint32_t uni_de_trabajo;
+} proceso_sleep_t;
+
+typedef struct {
+    proceso_t* proceso;
+    char* interfaz;
+    uint32_t uni_de_trabajo;
+    uint32_t registro_direccion;
+    uint32_t registro_tamanio;
+    char* nombre_archivo;
+    char* registro_puntero;
+} proceso_a_interfaz_t;
 
 extern t_log* logger_kernel;
 extern char* puerto_memoria;
@@ -50,9 +66,12 @@ extern pthread_mutex_t mutex_exit_queue;
 extern pthread_mutex_t mutex_generica_list;
 extern pthread_mutex_t mutex_generica_exec;
 extern pthread_mutex_t mutex_stdin_list;
+extern pthread_mutex_t mutex_stdin_exec;
 extern pthread_mutex_t mutex_stdout_list;
+extern pthread_mutex_t mutex_stdout_exec;
 extern pthread_mutex_t mutex_dialfs_list;
-extern pthread_mutex_t** mutex_recursos_list;
+extern pthread_mutex_t* mutex_recursos_list;
+extern pthread_mutex_t* mutex_recursos_instancias;
 extern sem_t multiprogramacion;
 extern sem_t pcb_esperando_ready;
 extern sem_t pcb_esperando_exec;
@@ -61,8 +80,10 @@ extern sem_t pcb_esperando_generica;
 extern sem_t pcb_esperando_stdin;
 extern sem_t pcb_esperando_stdout;
 extern sem_t pcb_esperando_dialfs;
-extern sem_t** pcb_esperando_recurso;
+extern sem_t* pcb_esperando_recurso;
 extern sem_t vuelta_io_gen_sleep;
+extern sem_t vuelta_io_stdin_read;
+extern sem_t vuelta_io_stdout_write;
 extern int procesos_activos;
 extern uint32_t pid_siguiente;
 extern int cpu_dispatch_fd;
@@ -78,7 +99,20 @@ void get_config(t_config* config);
 int cantidadDeRecursos(char** instancias_string);
 extern void finalizar_proceso(proceso_t* proceso);
 extern void recibir_fin_de_sleep();
-extern void ejecutar_proceso(proceso_t* proceso, t_log* logger);
 extern void mostrar_pids_ready(t_list* ready_list, char* cola);
 extern uint32_t _get_pid(proceso_t* proceso);
+extern void finalizar_proceso_de_pid(uint32_t pid_proceso);
+extern uint32_t pid_a_finalizar;
+extern int fin_a_proceso_sleep;
+extern void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion);
+extern int disminuciones_multiprogramacion;
+extern void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiempo_en_cpu, t_temporal* timer);
+extern void entrar_a_exit(proceso_t* proceso);
+extern void enviar_proceso_a_signal(proceso_t* proceso, char* recurso_signal);
+extern void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, char* interfaz, void (*hacer_peticion)(proceso_a_interfaz_t*));
+extern void hacer_io_stdin_read(proceso_a_interfaz_t* proceso_interfaz);
+extern void hacer_io_stdout_write(proceso_a_interfaz_t* proceso_interfaz);
+extern void ejecutar_proceso(proceso_t* proceso, t_log* logger, int quantum);
+extern void liberar_cpu();
+extern void ingresar_a_exec();
 #endif

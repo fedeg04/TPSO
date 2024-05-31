@@ -79,10 +79,14 @@ void inicializar_semaforos()
     pthread_mutex_init(&mutex_stdout_list, NULL);
     pthread_mutex_init(&mutex_dialfs_list, NULL);
     pthread_mutex_init(&mutex_generica_exec, NULL);
+    pthread_mutex_init(&mutex_stdin_exec, NULL);
+    pthread_mutex_init(&mutex_stdout_exec, NULL);
     mutex_recursos_list = malloc(cantidad_recursos * sizeof(pthread_mutex_t));
+    mutex_recursos_instancias = malloc(cantidad_recursos * sizeof(pthread_mutex_t));
     for (int i = 0; i < cantidad_recursos; i++)
     {
-        pthread_mutex_init(&mutex_recursos_list[cantidad_recursos], NULL);
+        pthread_mutex_init(&mutex_recursos_list[i], NULL);
+        pthread_mutex_init(&mutex_recursos_instancias[i], NULL);
     }
     sem_init(&multiprogramacion, 0, grado_multiprogramacion);
     sem_init(&pcb_esperando_ready, 0, 0);
@@ -93,10 +97,12 @@ void inicializar_semaforos()
     sem_init(&pcb_esperando_stdout, 0, 0);
     sem_init(&pcb_esperando_dialfs, 0, 0);
     sem_init(&vuelta_io_gen_sleep, 0, 0);
+    sem_init(&vuelta_io_stdin_read, 0, 0);
+    sem_init(&vuelta_io_stdout_write, 0, 0);
     pcb_esperando_recurso = malloc(cantidad_recursos * sizeof(sem_t));
     for (int i = 0; i < cantidad_recursos; i++)
     {
-        sem_init(&pcb_esperando_recurso[cantidad_recursos], 0, 0);
+        sem_init(&pcb_esperando_recurso[i], 0, instancias_recursos[i]);
     }
 }
 
@@ -112,9 +118,12 @@ void liberar_semaforos()
     pthread_mutex_destroy(&mutex_stdout_list);
     pthread_mutex_destroy(&mutex_dialfs_list);
     pthread_mutex_destroy(&mutex_generica_exec);
+    pthread_mutex_destroy(&mutex_stdin_exec);
+    pthread_mutex_destroy(&mutex_stdout_exec);
     for (int i = 0; i < cantidad_recursos; i++)
     {
-        pthread_mutex_destroy(&mutex_recursos_list[cantidad_recursos]);
+        pthread_mutex_destroy(&mutex_recursos_list[i]);
+        pthread_mutex_destroy(&mutex_recursos_instancias[i]);
     }
     free(mutex_recursos_list);
     sem_destroy(&multiprogramacion);
@@ -126,9 +135,11 @@ void liberar_semaforos()
     sem_destroy(&pcb_esperando_stdout);
     sem_destroy(&pcb_esperando_dialfs);
     sem_destroy(&vuelta_io_gen_sleep);
+    sem_destroy(&vuelta_io_stdin_read);
+    sem_destroy(&vuelta_io_stdout_write);
     for (int i = 0; i < cantidad_recursos; i++)
     {
-        sem_destroy(&pcb_esperando_recurso[cantidad_recursos]);
+        sem_destroy(&pcb_esperando_recurso[i]);
     }
     free(pcb_esperando_recurso);
 }

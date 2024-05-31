@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
 
     //Se conecta a la memoria
-    int memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
+    memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
 
     conectar_a_kernel();
     atender_pedidos_kernel();
@@ -68,7 +68,7 @@ void generica_atender_kernel() {
         switch(opcode) {
             case IO_GEN_SLEEP:
             uint32_t unis_de_trabajo;
-            recv(kernel_fd, &unis_de_trabajo, sizeof(op_code), 0);
+            recv(kernel_fd, &unis_de_trabajo, sizeof(uint32_t), 0);
             log_info(logger_io, "TIEMPO UNI: %d", tiempo_unidad_trabajo);
             log_info(logger_io, "UNIS: %d", unis_de_trabajo);
             log_info(logger_io, "TOTAL: %d", unis_de_trabajo * tiempo_unidad_trabajo);
@@ -82,22 +82,68 @@ void generica_atender_kernel() {
 }
 
 void stdin_atender_kernel() {
-    
+    while(1) {
+        op_code opcode;
+        recv(kernel_fd, &opcode, sizeof(op_code), 0);
+        switch(opcode) {
+            case IO_STDIN_READ:
+            uint32_t proceso_pid;
+            uint32_t registro_direccion;
+            uint32_t registro_tamanio;
+            recv(kernel_fd, &proceso_pid, sizeof(uint32_t), 0);
+            recv(kernel_fd, &registro_direccion, sizeof(uint32_t), 0);
+            recv(kernel_fd, &registro_tamanio, sizeof(uint32_t), 0);
+            enviar_pedido_stdinout(IO_STDIN_READ ,proceso_pid, registro_direccion, registro_tamanio);
+            op_code op_code_recep;
+            recv(memoria_fd, &op_code_recep, sizeof(op_code), 0);
+            fin_de(FIN_DE_STDIN);
+            break;
+            default:
+        }
+    }
 }
 
 void stdout_atender_kernel() {
-    
+  while(1) {
+        op_code opcode;
+        recv(kernel_fd, &opcode, sizeof(op_code), 0);
+        switch(opcode) {
+            case IO_STDOUT_WRITE:
+            uint32_t proceso_pid;
+            uint32_t registro_direccion;
+            uint32_t registro_tamanio;
+            recv(kernel_fd, &proceso_pid, sizeof(uint32_t), 0);
+            recv(kernel_fd, &registro_direccion, sizeof(uint32_t), 0);
+            recv(kernel_fd, &registro_tamanio, sizeof(uint32_t), 0);
+            enviar_pedido_stdinout(IO_STDOUT_WRITE ,proceso_pid, registro_direccion, registro_tamanio);
+            op_code op_code_recep;
+            recv(memoria_fd, &op_code_recep, sizeof(op_code), 0);
+            fin_de(FIN_DE_STDOUT);
+            break;
+            default:
+        }
+    }  
 }
 
 void dialfs_atender_kernel() {
     
 }
 
-void fin_de_sleep() {
+void fin_de(op_code opcode) {
     void* stream = malloc(sizeof(op_code));
     int offset = 0;
-    agregar_opcode(stream, &offset, FIN_DE_SLEEP);
+    agregar_opcode(stream, &offset, opcode);
     send(kernel_fd, stream, offset, 0);
     log_info(logger_io, "STREAM: %d", *((int*) stream));
     free(stream);
+}
+
+void enviar_pedido_stdinout(op_code opcode , uint32_t proceso_pid, uint32_t registro_direccion, uint32_t registro_tamanio) {
+    void* stream = malloc(sizeof(op_code) + 3 * sizeof(uint32_t));
+    int offset = 0;
+    agregar_opcode(stream, &offset, opcode);
+    agregar_uint32_t(stream, &offset, proceso_pid);
+    agregar_uint32_t(stream, &offset, registro_direccion);
+    agregar_uint32_t(stream, &offset, registro_tamanio);
+    send(memoria_fd, stream, offset, 0);
 }

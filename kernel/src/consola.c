@@ -56,7 +56,9 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
         }
     else if(!strcmp(comando, "FINALIZAR_PROCESO"))
     {
-
+        char* pid_proceso_recep = substrings[1];
+        uint32_t pid_proceso = atoi(pid_proceso_recep);
+        finalizar_proceso_de_pid(pid_proceso);
     }
     else if(!strcmp(comando, "DETENER_PLANIFICACION"))
     {
@@ -68,6 +70,9 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
     }
     else if(!strcmp(comando, "MULTIPROGRAMACION"))
     {
+        char* nuevo_grado_multiprogramacion_recep = substrings[1];
+        int nuevo_grado_multiprogramacion = atoi(nuevo_grado_multiprogramacion);
+        cambiar_grado_de_multiprogramacion(nuevo_grado_multiprogramacion);
 
     }
     else if(!strcmp(comando, "PROCESO_ESTADO"))

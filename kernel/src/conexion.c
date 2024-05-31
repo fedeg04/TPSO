@@ -44,6 +44,10 @@ void procesar_conexion(void* args_void) {
                 log_info(logger, "VOLVIO PROCESO DE HACER SLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP");
                 sem_post(&vuelta_io_gen_sleep);
                 break;
+            case FIN_DE_STDIN:
+                break;
+            case FIN_DE_STDOUT:
+                break;
             default:
         }
     }
