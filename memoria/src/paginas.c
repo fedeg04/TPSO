@@ -33,10 +33,12 @@ int tamanio_proceso(uint32_t pid)
 {
     int tamanio_proceso = 0;
     tabla_t *tabla_proceso = tabla_paginas_por_pid(pid);
-    for (int i = 0; i < cantidad_marcos(); i++)
-    {
-        pagina_t *pagina = list_get(tabla_proceso->paginas, i);
-        tamanio_proceso += pagina->bytes_ocupados;
+    if(!tabla_proceso->cantidad_paginas) {
+        return 0;
+    } else {
+        pagina_t* ultima_pagina = buscar_pagina_por_nro(tabla_proceso, tabla_proceso->cantidad_paginas - 1);
+        tamanio_proceso += ultima_pagina->bytes_ocupados;
+        tamanio_proceso += (tabla_proceso->cantidad_paginas-1)*32;
     }
     return tamanio_proceso;
 }
@@ -121,9 +123,10 @@ void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log *logger)
     pagina_t* segunda_pagina = list_get(tabla_proceso->paginas, 1);
     log_info(logger, "Primer pagina: %d", primera_pagina->nro_pagina);
     log_info(logger, "Sgunda pagina: %d", segunda_pagina->nro_pagina);
+    log_info(logger, "Cantidad de paginas: %d", tabla_proceso->cantidad_paginas);
     tamanio = vaciar_ultima_pagina(tabla_proceso, tamanio);
     log_info(logger, "Tamaño de la lista: %d", list_size(tabla_proceso->paginas));
-    for (int i = tabla_proceso->cantidad_paginas - 1; i >= 0; i--)
+    for (int i = tabla_proceso->cantidad_paginas - 1; (i >= 0) && tamanio > 0; i--)
     {
         pagina_t *pagina = list_get(tabla_proceso->paginas, i);
         if (pagina->bytes_ocupados)
