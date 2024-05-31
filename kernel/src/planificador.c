@@ -43,6 +43,7 @@ void mostrar_pids_ready(t_list* ready_list, char* cola) {
         string_append(&buffer, " ");
     }
     log_info(logger_kernel, "Cola Ready <%s>: %s", cola, buffer);
+    free(buffer);
     list_destroy(pids);
 }
 
@@ -66,7 +67,7 @@ void ingresar_a_exec()
     proceso_t *proceso = obtenerSiguienteAExec();
     list_add(pcbs_exec, (void *)proceso);
     log_info(logger_kernel, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso->pid);
-    ejecutar_proceso(proceso, logger_kernel);
+    ejecutar_proceso(proceso, logger_kernel, proceso->quantum);
 }
 
 proceso_t *obtenerSiguienteAExec()
@@ -74,7 +75,9 @@ proceso_t *obtenerSiguienteAExec()
     proceso_t *pcb;
     if (!list_is_empty(pcbs_ready_prioritarios))
     {
-        // TODO: cuando hagamos VRR lo vemos
+        pthread_mutex_lock(&mutex_ready_prioritario_list);
+        pcb = list_remove(pcbs_ready_prioritarios, 0);
+        pthread_mutex_unlock(&mutex_ready_prioritario_list);
     }
     else
     {
@@ -91,28 +94,28 @@ void liberar_cpu()
     pthread_mutex_unlock(&mutex_exec_list);
 }
 
-void ejecutar_proceso(proceso_t *proceso, t_log *logger)
+void ejecutar_proceso(proceso_t *proceso, t_log *logger, int unQuantum)
 {
+    t_temporal *timer = temporal_create();
     log_info(logger, "Algoritmo: %s", algoritmo_planificacion);
     if (!strcmp(algoritmo_planificacion, "FIFO"))
     {
         log_info(logger, "Se envia el proceso <%d> a CPU", proceso->pid);
         enviar_proceso_a_cpu(proceso, logger);
         esperar_llegada_de_proceso_fifo(proceso, logger);
-        esperar_contexto_de_ejecucion(proceso, logger);
+        esperar_contexto_de_ejecucion(proceso, logger, timer, 0);
     }
     else if (!strcmp(algoritmo_planificacion, "RR") || !strcmp(algoritmo_planificacion, "VRR"))
     {
-        t_temporal *timer = temporal_create();
         enviar_proceso_a_cpu(proceso, logger);
         pthread_t hilo_interrupcion;
         interrupcion_proceso_t *args_interrupcion = malloc(sizeof(interrupcion_proceso_t));
         args_interrupcion->proceso = proceso;
         args_interrupcion->timer = timer;
         args_interrupcion->logger = logger;
+        args_interrupcion->quantum = unQuantum;
         pthread_create(&hilo_interrupcion, NULL, (void *)manejar_interrupcion_de_timer, (void *)args_interrupcion);
         esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger);
-        esperar_contexto_de_ejecucion(proceso, logger);
         pthread_detach(hilo_interrupcion);
     }
 }
@@ -158,9 +161,10 @@ void manejar_interrupcion_de_timer(void *args_void)
     t_log *logger = args->logger;
     t_temporal *timer = args->timer;
     proceso_t *proceso = args->proceso;
+    int unQuantum = args->quantum;
     free(args);
-    usleep(quantum * 1000);
-    if (timer->status == TEMPORAL_STATUS_RUNNING)
+    usleep(unQuantum * 1000);
+    if (timer != NULL && timer->status == TEMPORAL_STATUS_RUNNING)
     {
         temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);
@@ -184,26 +188,23 @@ void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_
     uint32_t pid;
     uint32_t quantum;
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
-    if(timer->status == TEMPORAL_STATUS_RUNNING) {
-    temporal_stop(timer);
-    log_info(logger_kernel, "TIMER DE PROCESO %d: %d", proceso->pid, temporal_gettime(timer));
-    }
+    uint32_t tiempo_en_cpu = (uint32_t)temporal_gettime(timer);
     recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
     if (!strcmp(algoritmo_planificacion, "VRR"))
     {
-        if (temporal_gettime(timer) < proceso->quantum)
+        if (tiempo_en_cpu < proceso->quantum)
         {
-            proceso->quantum -= (uint32_t)temporal_gettime(timer);
+            proceso->quantum -= tiempo_en_cpu;
         }
         else
         {
             proceso->quantum = quantum;
         }
-        temporal_destroy(timer);
     }
+    esperar_contexto_de_ejecucion(proceso, logger, timer, tiempo_en_cpu);
 }
 
-void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)
+void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal* timer, uint32_t tiempo_en_cpu)
 {
     uint32_t PC;
     uint8_t AX;
@@ -246,7 +247,6 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)
     proceso->registros->SI = SI;
     proceso->registros->DI = DI;
 
-    liberar_cpu();
     log_info(logger, "Motivo: %s", motivo_de_desalojo);
     char **substrings;
     char *instruccion_de_motivo_string;
@@ -262,8 +262,18 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)
     {
         instruccion_de_motivo_string = motivo_de_desalojo;
     }
+
     op_code instruccion_de_motivo = string_to_opcode(instruccion_de_motivo_string);
+
+    if(instruccion_de_motivo != WAIT && instruccion_de_motivo != SIGNAL) {
+        temporal_stop(timer);
+        liberar_cpu();    
+    }
+
+
     log_info(logger, "Instruccion: %s", instruccion_de_motivo_string);
+    proceso_a_interfaz_t* proceso_interfaz = malloc(sizeof(proceso_a_interfaz_t));
+    proceso_interfaz->proceso = proceso;
     switch (instruccion_de_motivo)
     {
     case IO_GEN_SLEEP:
@@ -275,18 +285,20 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)
         hacer_io_gen_sleep();
         break;
     case IO_STDIN_READ:
-        char *interfaz_stdin = substrings[1];
-        uint32_t registro_direccion_stdin = atoi(substrings[2]);
-        uint32_t registro_tamanio_stdin = atoi(substrings[3]);
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->registro_direccion = atoi(substrings[2]);
+        proceso_interfaz->registro_tamanio = atoi(substrings[3]);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <PID> - Bloqueado por: <STDIN>");
+        enviar_proceso_a_interfaz(proceso_interfaz, "STDIN", hacer_io_stdin_read);
         break;
     case IO_STDOUT_WRITE:
-        char *interfaz_stdout = substrings[1];
-        uint32_t registro_direccion_stdout = atoi(substrings[2]);
-        uint32_t registro_tamanio_stdout = atoi(substrings[3]);
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->registro_direccion = atoi(substrings[2]);
+        proceso_interfaz->registro_tamanio = atoi(substrings[3]);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <PID> - Bloqueado por: <STDOUT>");
+        enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
         break;
     case IO_FS_CREATE:
         char *interfaz_create = substrings[1];
@@ -328,20 +340,21 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)
     case WAIT:
         char *recurso_wait = substrings[1];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        enviar_proceso_a_wait(proceso, recurso_wait, tiempo_en_cpu, timer);
         break;
     case SIGNAL:
         char *recurso_signal = substrings[1];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        enviar_proceso_a_signal(proceso, recurso_signal);
         break;
     case EXIT:
         log_info(logger_kernel, "Finaliza el proceso %d - Motivo: SUCCESS", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-        sem_post(&multiprogramacion);
-        ingresar_a_exit(proceso);
-        realizar_exit();
+        entrar_a_exit(proceso);
         break;
     case TIMER:
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <READY>", proceso->pid);
+        proceso->quantum=  quantum;
         pthread_mutex_unlock(&mutex_ready_list);
         list_add(pcbs_ready, proceso);
         mostrar_pids_ready(pcbs_ready, "READY");
@@ -355,36 +368,11 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger)
         string_array_destroy(substrings);
     }
     free(motivo_de_desalojo);
+    free(proceso_interfaz);
+    temporal_destroy(timer);
 }
 
-void liberar_recursos_proceso(proceso_t *proceso, t_log *logger)
-{
-    if (list_remove_element(pcbs_exec, proceso))
-    {
-        elegir_proceso_a_exec(logger);
-    }
-    finalizar_proceso(proceso);
-}
 
-void elegir_proceso_a_exec(t_log *logger)
-{
-    if (!list_is_empty(pcbs_ready_prioritarios))
-    {
-        proceso_t *proceso_a_exec_prior = list_remove(pcbs_ready_prioritarios, 0);
-        log_info(logger, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso_a_exec_prior->pid);
-        list_add(pcbs_exec, proceso_a_exec_prior);
-        list_remove_element(pcbs_ready_prioritarios, proceso_a_exec_prior);
-        ejecutar_proceso(proceso_a_exec_prior, logger);
-    }
-    if (!list_is_empty(pcbs_ready))
-    {
-        proceso_t *proceso_a_exec = list_remove(pcbs_ready, 0);
-        log_info(logger, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso_a_exec->pid);
-        list_add(pcbs_exec, proceso_a_exec);
-        list_remove_element(pcbs_ready, proceso_a_exec);
-        ejecutar_proceso(proceso_a_exec, logger);
-    }
-}
 
 void finalizar_proceso(proceso_t *proceso){
     void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
@@ -432,4 +420,76 @@ void entrar_a_cola_dialfs()
 
 void entrar_a_cola_recurso()
 {
+}
+
+void finalizar_proceso_de_pid(uint32_t pid_proceso) {
+    // Habria que poner un semaforo que de mutua exclusion sobre pid_a_finalizar
+    pid_a_finalizar = pid_proceso;
+    buscar_en_cola_y_finalizar_proceso(pcbs_new, mutex_new_list);
+    buscar_en_cola_y_finalizar_proceso(pcbs_ready, mutex_ready_list);
+    buscar_en_cola_y_finalizar_proceso(pcbs_ready_prioritarios, mutex_ready_prioritario_list);
+    buscar_en_cola_de_bloqueados_y_finalizar_proceso(pcbs_generica, mutex_generica_list, &fin_a_proceso_sleep);
+    // faltan las demas interfaces y proceso en ejecucion
+}
+
+bool tiene_el_pid(proceso_t* proceso) {
+    return pid_a_finalizar == proceso->pid;
+}
+
+void buscar_en_cola_y_finalizar_proceso(t_list* cola, pthread_mutex_t mutex)  {
+    pthread_mutex_lock(&mutex);
+    proceso_t* proceso =list_remove_by_condition(cola, (void*) tiene_el_pid);
+    pthread_mutex_unlock(&mutex);
+    if(proceso != NULL) {
+    ingresar_a_exit(proceso); // revisar multiprogramacion para los que ya estan ready
+    realizar_exit();
+    }
+}
+
+bool tiene_el_pid_sleep(proceso_sleep_t* proceso_sleep){
+    return pid_a_finalizar == proceso_sleep->proceso->pid;
+}
+
+void buscar_en_cola_de_bloqueados_y_finalizar_proceso(t_list* cola, pthread_mutex_t mutex, int* flag) {
+    proceso_sleep_t* proceso_de_sleep;
+     pthread_mutex_lock(&mutex);
+    if(tiene_el_pid(list_get(cola, 0))) {
+        //fin a proceso sleep debe tener su mutex
+        *flag = 1;
+        //wait a que el planificador avise que se lo puede eliminar
+        *flag = 0;
+        proceso_de_sleep = list_remove(pcbs_generica, 0);
+    }
+    else {
+        proceso_de_sleep =list_remove_by_condition(cola, (void*) tiene_el_pid_sleep); 
+    }
+    pthread_mutex_unlock(&mutex);
+    if(proceso_de_sleep != NULL) {
+        proceso_t* proceso_a_exit= proceso_de_sleep->proceso;
+        free(proceso_de_sleep);
+        entrar_a_exit(proceso_a_exit);
+    }
+}
+
+void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion) {
+    if(nuevo_grado_multiprogramacion > grado_multiprogramacion) {
+        for(int i = 0; i < nuevo_grado_multiprogramacion - grado_multiprogramacion; i++) {
+            sem_post(&multiprogramacion);
+        }
+    }
+    else {
+        disminuciones_multiprogramacion = grado_multiprogramacion - nuevo_grado_multiprogramacion;
+    }
+    grado_multiprogramacion = nuevo_grado_multiprogramacion;
+}
+
+void entrar_a_exit(proceso_t* proceso) {
+    if(disminuciones_multiprogramacion > 0) {
+        disminuciones_multiprogramacion--; // hay que inicializar el valor
+    }
+    else {
+        sem_post(&multiprogramacion);
+    }
+    ingresar_a_exit(proceso);
+    realizar_exit();
 }

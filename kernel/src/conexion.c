@@ -28,7 +28,7 @@ void procesar_conexion(void* args_void) {
                 conectar_interfaz("DIALFS", socket_cliente);
                 break;
             case GENERICA_BYE:
-                log_info(logger, "Se desconect{o la genérica");
+                log_info(logger, "Se desconectó la genérica");
                 desconectar_interfaz("GENERICA");
                 break;
             case STDIN_BYE:
@@ -43,6 +43,10 @@ void procesar_conexion(void* args_void) {
             case FIN_DE_SLEEP:
                 log_info(logger, "VOLVIO PROCESO DE HACER SLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP");
                 sem_post(&vuelta_io_gen_sleep);
+                break;
+            case FIN_DE_STDIN:
+                break;
+            case FIN_DE_STDOUT:
                 break;
             default:
         }

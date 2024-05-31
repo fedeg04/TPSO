@@ -48,9 +48,12 @@ pthread_mutex_t mutex_exit_queue;
 pthread_mutex_t mutex_generica_list;
 pthread_mutex_t mutex_generica_exec;
 pthread_mutex_t mutex_stdin_list;
+pthread_mutex_t mutex_stdin_exec;
 pthread_mutex_t mutex_stdout_list;
+pthread_mutex_t mutex_stdout_exec;
 pthread_mutex_t mutex_dialfs_list;
-pthread_mutex_t** mutex_recursos_list;
+pthread_mutex_t* mutex_recursos_list;
+pthread_mutex_t* mutex_recursos_instancias;
 sem_t multiprogramacion;
 sem_t pcb_esperando_ready;
 sem_t pcb_esperando_exec;
@@ -60,6 +63,10 @@ sem_t pcb_esperando_stdin;
 sem_t pcb_esperando_stdout;
 sem_t pcb_esperando_dialfs;
 sem_t vuelta_io_gen_sleep;
-sem_t** pcb_esperando_recurso;
-
+sem_t vuelta_io_stdin_read;
+sem_t vuelta_io_stdout_write;
+sem_t* pcb_esperando_recurso;
+uint32_t pid_a_finalizar;
+int fin_a_proceso_sleep;
+int disminuciones_multiprogramacion;
 #endif
