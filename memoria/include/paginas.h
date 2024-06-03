@@ -34,9 +34,12 @@ void eliminar_tabla(uint32_t pid);
 int cantidad_paginas_proceso(uint32_t pid_a_finalizar);
 pagina_t *buscar_pagina_por_nro(tabla_t *tabla, int nro_pagina);
 bool pagina_por_nro(pagina_t *pagina);
+void escribir(uint16_t dir_fis, void* valor, uint16_t cantidad_de_bytes, t_log* logger, uint32_t pid);
+void leer(void* lectura, uint16_t dir_fis, uint16_t cantidad_de_bytes, t_log* logger, uint32_t pid);
 extern t_list* tablas_paginas_memoria;
 extern int tam_memoria;
-extern int tam_pagina;
+extern uint32_t tam_pagina;
 extern t_bitarray* bitarray_tabla;
+extern void* memoria;
 
 #endif

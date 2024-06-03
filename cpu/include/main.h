@@ -17,6 +17,7 @@ char* puerto_escucha_dispatch;
 char* puerto_escucha_interrupt;
 int cantidad_entradas_tlb;
 char* algoritmo_tlb;
+int tamanio_pagina;
 int servers_escuchar();
 registros_t* registros_cpu;
 

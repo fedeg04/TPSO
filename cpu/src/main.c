@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
 
     // Se conecta como cliente a la memoria
     memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);
+    tamanio_pagina = pedir_tamanio_pagina(memoria_fd);
 
     // Empieza el servidor dispatch
     cpu_dispatch_fd = iniciar_servidor(logger_cpu, puerto_escucha_dispatch, "CPU dispatch");

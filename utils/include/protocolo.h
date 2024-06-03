@@ -38,6 +38,8 @@ typedef enum {
     DIALFS_BYE,
     TIMER,
     OUTOFMEMORY,
+    TAMANIOPAGINA,
+    PEDIR_MARCO,
     MSG
 } op_code;
 

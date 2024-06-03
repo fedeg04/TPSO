@@ -1,10 +1,9 @@
 #ifndef MMU_H_
 #define MMU_H_
 #include <stdint.h>
-uint16_t pagina_direccion_logica(char* direccion_logica);
-uint16_t desplazamiento_direccion_logica(char* direccion_logica);
 
-
-
-
+extern int tamanio_pagina;
+uint16_t pagina_direccion_logica(uint32_t direccion_logica);
+uint16_t desplazamiento_direccion_logica(uint32_t direccion_logica);
+uint8_t cantidad_paginas_enviar(int cantidad_bytes, uint32_t direccion_logica);
 #endif

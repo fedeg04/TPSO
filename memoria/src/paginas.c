@@ -186,3 +186,18 @@ int cantidad_paginas_proceso(uint32_t pid_a_finalizar)
 {
     return (tamanio_proceso(pid_a_finalizar) + tam_pagina - 1) / tam_pagina;
 }
+
+void escribir(uint16_t dir_fis, void* valor, uint16_t cantidad_de_bytes, t_log* logger, uint32_t pid) {
+    log_info(logger, "PID: <%d> - Accion: <ESCRIBIR> - Direccion fisica: <%d> - Tamaño <%d>",
+    pid, dir_fis, cantidad_de_bytes);
+    memcpy(memoria + dir_fis, valor, cantidad_de_bytes);
+}
+
+void leer(void* lectura, uint16_t dir_fis, uint16_t cantidad_de_bytes, t_log* logger, uint32_t pid) {
+    log_info(logger, "PID: <%d> - Accion: <LEER> - Direccion fisica: <%d> - Tamaño <%d>",
+    pid, dir_fis, cantidad_de_bytes);
+    void* posicion = (char*)memoria + dir_fis;
+    memcpy(lectura, posicion, cantidad_de_bytes);
+}
+
+
