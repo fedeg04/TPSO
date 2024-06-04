@@ -76,69 +76,80 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
     char** substrings = string_split(instruccion, " ");
     char* comando = substrings[0];
     op_code opcode = string_to_opcode(comando);
-    char* registro_dest;
-    char* registro_orig;
-    uint32_t valor_dest;
-    uint32_t valor_orig;
+    char* primer_parametro;
+    char* segundo_parametro;
+    char* tercer_parametro;
+    uint32_t primer_valor;
+    uint32_t segundo_valor;
+    uint32_t tercer_valor;
     int length = 0;
     while (substrings[length] != NULL) {
         length++;
     }
     if(length == 2) {
-        registro_dest = substrings[1];
-        valor_dest = get_valor_registro(registro_dest);
+        primer_parametro = substrings[1];
+        primer_valor = get_valor_registro(primer_parametro);
     }
     if (length == 3)
     {
-        registro_dest = substrings[1];
-        registro_orig = substrings[2];
-        valor_dest = get_valor_registro(registro_dest);
-        valor_orig = get_valor_registro(registro_orig);
+        primer_parametro = substrings[1];
+        segundo_parametro = substrings[2];
+        primer_valor = get_valor_registro(primer_parametro);
+        segundo_valor = get_valor_registro(segundo_parametro);
+    }
+    if (length == 4)
+    {
+        primer_parametro = substrings[1];
+        segundo_parametro = substrings[2];
+        tercer_parametro = substrings[3];
+        primer_valor = get_valor_registro(primer_parametro);
+        segundo_valor = get_valor_registro(segundo_parametro);
+        tercer_valor = get_valor_registro(tercer_parametro);
     }
     
     switch(opcode) {
         case SET:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            valor_dest = atoi(substrings[2]);
-            set_registros(registro_dest, valor_dest);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            primer_valor = atoi(substrings[2]);
+            set_registros(primer_parametro, primer_valor);
             string_array_destroy(substrings);
             return 1;
         case MOV_IN:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            uint32_t cantidad_bytes_in = cant_bytes(registro_dest);
-            uint8_t cant_paginas = cantidad_paginas_enviar(cantidad_bytes_in, valor_orig);
-            pedir_marcos(pcb->pid, cant_paginas, pagina_direccion_logica(valor_orig));
-            uint32_t lectura = enviar_mov_in(cant_paginas, pcb->pid, cantidad_bytes_in, desplazamiento_direccion_logica(valor_orig));
-            set_registros(registro_dest, lectura);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            uint32_t cantidad_bytes_in = cant_bytes(primer_parametro);
+            uint8_t cant_paginas = cantidad_paginas_enviar(cantidad_bytes_in, segundo_valor);
+            pedir_marcos(pcb->pid, cant_paginas, pagina_direccion_logica(segundo_valor));
+            uint32_t lectura = enviar_mov_in(cant_paginas, pcb->pid, cantidad_bytes_in, desplazamiento_direccion_logica(segundo_valor));
+            set_registros(primer_parametro, lectura);
             return 1;
         case MOV_OUT:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            uint32_t cantidad_bytes = cant_bytes(registro_orig);
-            uint8_t cant_paginas_enviar = cantidad_paginas_enviar(cantidad_bytes, valor_dest);
-            pedir_marcos(pcb->pid, cant_paginas_enviar, pagina_direccion_logica(valor_dest));
-            enviar_mov_out(valor_orig, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(valor_dest));
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            uint32_t cantidad_bytes = cant_bytes(segundo_parametro);
+            uint8_t cant_paginas_enviar = cantidad_paginas_enviar(cantidad_bytes, primer_valor);
+            pedir_marcos(pcb->pid, cant_paginas_enviar, pagina_direccion_logica(primer_valor));
+            enviar_mov_out(segundo_valor, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(primer_valor));
             string_array_destroy(substrings);
             return respuesta_memoria(pcb, socket);
         case SUM:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            set_registros(registro_dest, valor_dest + valor_orig);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            set_registros(primer_parametro, primer_valor + segundo_valor);
             return 1;
         case SUB:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            log_info(logger, "1: %d, 2: %d", valor_dest, valor_orig);
-            set_registros(registro_dest, valor_dest - valor_orig);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            log_info(logger, "1: %d, 2: %d", primer_valor, segundo_valor);
+            set_registros(primer_parametro, primer_valor - segundo_valor);
             return 1;
         case JNZ:
-            valor_dest = atoi(substrings[2]);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, registro_orig, valor_dest);
-            if(valor_orig != 0) {
-                set_registros("PC", valor_dest);
+            primer_valor = atoi(substrings[2]);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, segundo_parametro, primer_valor);
+            if(segundo_valor != 0) {
+                set_registros("PC", primer_valor);
             }
         return 1;
         case RESIZE:
-            valor_dest = atoi(substrings[1]);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, valor_dest);
-            enviar_resize(valor_dest, pcb->pid);
+            primer_valor = atoi(substrings[1]);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, primer_valor);
+            enviar_resize(primer_valor, pcb->pid);
             string_array_destroy(substrings);
             return respuesta_memoria(pcb, socket);
         case COPY_STRING:
@@ -150,11 +161,13 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
             enviar_contexto(socket, pcb, instruccion);
             return 0;
         case IO_GEN_SLEEP:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_orig, registro_dest);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, segundo_parametro, primer_parametro);
             registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             return 0;
         case IO_STDIN_READ:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, segundo_parametro, primer_parametro);
+
         return 1;
         case IO_STDOUT_WRITE:
         return 1;
@@ -281,28 +294,28 @@ void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
     free(stream);
 }
 
-void set_registros(char* registro_dest, uint32_t valor) {
-    if (strcmp(registro_dest, "AX") == 0) {
+void set_registros(char* primer_parametro, uint32_t valor) {
+    if (strcmp(primer_parametro, "AX") == 0) {
         registros_cpu->AX = valor;
-    } else if (strcmp(registro_dest, "BX") == 0) {
+    } else if (strcmp(primer_parametro, "BX") == 0) {
         registros_cpu->BX = valor;
-    } else if (strcmp(registro_dest, "CX") == 0) {
+    } else if (strcmp(primer_parametro, "CX") == 0) {
         registros_cpu->CX = valor;
-    } else if (strcmp(registro_dest, "DX") == 0) {
+    } else if (strcmp(primer_parametro, "DX") == 0) {
         registros_cpu->DX = valor;
-    } else if (strcmp(registro_dest, "EAX") == 0) {
+    } else if (strcmp(primer_parametro, "EAX") == 0) {
         registros_cpu->EAX = valor;
-    } else if (strcmp(registro_dest, "EBX") == 0) {
+    } else if (strcmp(primer_parametro, "EBX") == 0) {
         registros_cpu->EBX = valor;
-    } else if (strcmp(registro_dest, "ECX") == 0) {
+    } else if (strcmp(primer_parametro, "ECX") == 0) {
         registros_cpu->ECX = valor;
-    } else if (strcmp(registro_dest, "EDX") == 0) {
+    } else if (strcmp(primer_parametro, "EDX") == 0) {
         registros_cpu->EDX = valor;
-    } else if (strcmp(registro_dest, "PC") == 0) {
+    } else if (strcmp(primer_parametro, "PC") == 0) {
         registros_cpu->PC = valor-1;
-    } else if (strcmp(registro_dest, "SI") == 0) {
+    } else if (strcmp(primer_parametro, "SI") == 0) {
         registros_cpu->SI = valor;
-    } else if (strcmp(registro_dest, "DI") == 0) {
+    } else if (strcmp(primer_parametro, "DI") == 0) {
         registros_cpu->DI = valor;
     }
 }
