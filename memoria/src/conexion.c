@@ -59,7 +59,7 @@ void procesar_conexion(void* args_void) {
                 enviar_instruccion(socket_cliente, instruccion);
                 free(instruccion);
                 break;
-            case MOV_IN:
+            case LEER:
                 uint16_t dir_fis_mov_in;
                 uint16_t bytes_mov_in;  
                 uint32_t pid_mov_in;
@@ -71,7 +71,7 @@ void procesar_conexion(void* args_void) {
                 usleep(retardo_respuesta * 1000);
                 enviar_lectura(socket_cliente, lectura, bytes_mov_in);
                 break;
-            case MOV_OUT:
+            case ESCRIBIR:
                 uint8_t cant_pags_mov_out;
                 uint16_t dir_fis_mov_out;
                 uint16_t bytes_mov_out;  

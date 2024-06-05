@@ -40,6 +40,8 @@ typedef enum {
     OUTOFMEMORY,
     TAMANIOPAGINA,
     PEDIR_MARCO,
+    LEER, 
+    ESCRIBIR,
     MSG
 } op_code;
 

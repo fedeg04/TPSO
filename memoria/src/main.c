@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     memset(bitarray, 0, sizeof(bitarray));
     bitarray_tabla = bitarray_create(bitarray,(cant_marcos+7)/8);
 
-    controlar_seniales(logger_memoria);
+    //controlar_seniales(logger_memoria);
 
     //Empieza el servidor
     int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha, "memoria");

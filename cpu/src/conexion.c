@@ -48,10 +48,13 @@ void procesar_conexion_dispatch(void* args_void) {
                     log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
                     enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
                     char* instruccion = recibir_instruccion(memoria_fd);
-                    if(!ejecutar_instruccion(instruccion, logger, pcb, socket_cliente)) {
+                    char** parametros = string_split(instruccion, " ");
+                    if(!ejecutar_instruccion(parametros, instruccion, logger, pcb, socket_cliente)) {
                         free(instruccion);
+                        string_array_destroy(parametros);
                         break;
                     }
+                    string_array_destroy(parametros);
                     registros_cpu->PC++;
                     free(instruccion);
                     if(hay_interrupcion(pcb->pid)){
@@ -71,10 +74,8 @@ void procesar_conexion_dispatch(void* args_void) {
     return;
 }
 
-int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int socket) {
-    
-    char** substrings = string_split(instruccion, " ");
-    char* comando = substrings[0];
+int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, proceso_t* pcb, int socket) {
+    char* comando = parametros[0];
     op_code opcode = string_to_opcode(comando);
     char* primer_parametro;
     char* segundo_parametro;
@@ -83,36 +84,35 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
     uint32_t segundo_valor;
     uint32_t tercer_valor;
     int length = 0;
-    while (substrings[length] != NULL) {
+    while (parametros[length] != NULL) {
         length++;
     }
     if(length == 2) {
-        primer_parametro = substrings[1];
+        primer_parametro = parametros[1];
         primer_valor = get_valor_registro(primer_parametro);
     }
     if (length == 3)
     {
-        primer_parametro = substrings[1];
-        segundo_parametro = substrings[2];
+        primer_parametro = parametros[1];
+        segundo_parametro = parametros[2];
         primer_valor = get_valor_registro(primer_parametro);
         segundo_valor = get_valor_registro(segundo_parametro);
     }
     if (length == 4)
     {
-        primer_parametro = substrings[1];
-        segundo_parametro = substrings[2];
-        tercer_parametro = substrings[3];
+        primer_parametro = parametros[1];
+        segundo_parametro = parametros[2];
+        tercer_parametro = parametros[3];
         primer_valor = get_valor_registro(primer_parametro);
         segundo_valor = get_valor_registro(segundo_parametro);
         tercer_valor = get_valor_registro(tercer_parametro);
     }
-    
+
     switch(opcode) {
         case SET:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
-            primer_valor = atoi(substrings[2]);
-            set_registros(primer_parametro, primer_valor);
-            string_array_destroy(substrings);
+            segundo_valor = atoi(segundo_parametro);
+            set_registros(primer_parametro, segundo_valor);
             return 1;
         case MOV_IN:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
@@ -128,7 +128,6 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
             uint8_t cant_paginas_enviar = cantidad_paginas_enviar(cantidad_bytes, primer_valor);
             pedir_marcos(pcb->pid, cant_paginas_enviar, pagina_direccion_logica(primer_valor));
             enviar_mov_out(segundo_valor, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(primer_valor));
-            string_array_destroy(substrings);
             return respuesta_memoria(pcb, socket);
         case SUM:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
@@ -140,17 +139,15 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
             set_registros(primer_parametro, primer_valor - segundo_valor);
             return 1;
         case JNZ:
-            primer_valor = atoi(substrings[2]);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, segundo_parametro, primer_valor);
-            if(segundo_valor != 0) {
-                set_registros("PC", primer_valor);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            if(primer_valor != 0) {
+                set_registros("PC", segundo_valor);
             }
         return 1;
         case RESIZE:
-            primer_valor = atoi(substrings[1]);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, primer_valor);
+            primer_valor = atoi(primer_parametro);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
             enviar_resize(primer_valor, pcb->pid);
-            string_array_destroy(substrings);
             return respuesta_memoria(pcb, socket);
         case COPY_STRING:
         return 1;
@@ -161,14 +158,24 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
             enviar_contexto(socket, pcb, instruccion);
             return 0;
         case IO_GEN_SLEEP:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, segundo_parametro, primer_parametro);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             return 0;
         case IO_STDIN_READ:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, segundo_parametro, primer_parametro);
-
-        return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            uint8_t cant_paginas_read = cantidad_paginas_enviar(tercer_valor, segundo_valor);
+            pedir_marcos(pcb->pid, cant_paginas_read, pagina_direccion_logica(segundo_valor));
+            char* io_stdin_a_kernel = malloc(strlen(primer_parametro) + 1);
+            strcpy(io_stdin_a_kernel, primer_parametro);
+            char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor));
+            string_append(&io_stdin_a_kernel, " ");
+            string_append(&io_stdin_a_kernel, envio_direcciones_tamanios);
+            log_info(logger, "String: %s", io_stdin_a_kernel);
+            enviar_contexto(socket, pcb, io_stdin_a_kernel);
+            free(io_stdin_a_kernel);
+            free(envio_direcciones_tamanios);
+            return 0;
         case IO_STDOUT_WRITE:
         return 1;
         case IO_FS_CREATE:
@@ -184,10 +191,8 @@ int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int s
         case EXIT:
             log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
             enviar_contexto(socket, pcb, instruccion);
-            string_array_destroy(substrings);
             return 0;
     }
-    string_array_destroy(substrings);
 }
 
 bool hay_interrupcion(uint32_t pid) {
@@ -371,7 +376,7 @@ void pedir_marcos(uint32_t pid, uint8_t cant_paginas_enviar, uint32_t nro_pagina
 void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento) {
     void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t));
     int offset = 0;
-    agregar_opcode(stream, &offset, MOV_OUT);
+    agregar_opcode(stream, &offset, ESCRIBIR);
     agregar_uint8_t(stream, &offset, cant_pags_a_enviar);
     agregar_uint32_t(stream, &offset, pid);
     uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
@@ -446,7 +451,7 @@ uint32_t enviar_mov_in(uint8_t cant_pags, uint32_t pid, uint32_t cant_bytes, uin
     {
         void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t)*2);
         int offset = 0;
-        agregar_opcode(stream, &offset, MOV_IN);
+        agregar_opcode(stream, &offset, LEER);
         agregar_uint32_t(stream, &offset, pid);
         uint16_t marco;
         recv(memoria_fd, &marco, sizeof(uint16_t), 0);
@@ -480,3 +485,36 @@ uint32_t enviar_mov_in(uint8_t cant_pags, uint32_t pid, uint32_t cant_bytes, uin
     free(lectura);
     return (uint32_t)valor_hex;
 }
+
+char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, uint16_t desplazamiento) {
+    char* direcciones_tamanios = malloc(cant_digitos(cant_pags) + 2);
+    sprintf(direcciones_tamanios, "%u", cant_pags);
+    string_append(&direcciones_tamanios, " ");
+    while (tamanio)
+    {
+        uint16_t marco;
+        recv(memoria_fd, &marco, sizeof(uint16_t), 0);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        uint32_t tamanio_df;
+        if(cant_pags > 1) {
+            tamanio_df = tamanio_pagina - desplazamiento;
+            desplazamiento = 0;
+        } else {
+            tamanio_df = tamanio;
+        }
+        tamanio -= tamanio_df;
+        cant_pags--;
+        char* df_string = malloc(cant_digitos(direccion_fisica) + 1);
+        sprintf(df_string, "%u", direccion_fisica);
+        char* tamanio_df_string = malloc(cant_digitos(tamanio_df) + 1);
+        sprintf(tamanio_df_string, "%u", tamanio_df);
+        string_append(&direcciones_tamanios, df_string);
+        string_append(&direcciones_tamanios, "-");
+        string_append(&direcciones_tamanios, tamanio_df_string);
+        string_append(&direcciones_tamanios, "-");
+        free(df_string);
+        free(tamanio_df_string);
+    }
+    return direcciones_tamanios;
+}
+

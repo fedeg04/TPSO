@@ -24,7 +24,6 @@ void pagina_destroy(pagina_t* pagina);
 int cantidad_marcos();
 int tamanio_proceso(uint32_t pid);
 tabla_t* tabla_paginas_por_pid(uint32_t pid);
-bool tabla_paginas_por_pid_actual(tabla_t* tabla);
 bool ampliar_tamanio_proceso(uint32_t pid, int tamanio);
 void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log* logger);	
 int completar_ultima_pagina(tabla_t* tabla, int tamanio);

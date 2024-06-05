@@ -1,5 +1,4 @@
 #include <../include/paginas.h>
-uint32_t pid_actual;
 int nro_pagina_a_buscar;
 
 tabla_t *iniciar_tabla(uint32_t pid, int cantidad_paginas)
@@ -45,14 +44,14 @@ int tamanio_proceso(uint32_t pid)
 
 tabla_t *tabla_paginas_por_pid(uint32_t pid)
 {
-    pid_actual = pid;
-    return list_find(tablas_paginas_memoria, (void *)tabla_paginas_por_pid_actual);
+    bool buscar_pagina(tabla_t *tabla)
+    {
+        return (tabla->pid == pid);  
+    }
+    return list_find(tablas_paginas_memoria, (void *)buscar_pagina);
 }
 
-bool tabla_paginas_por_pid_actual(tabla_t *tabla)
-{
-    return (tabla->pid == pid_actual);
-}
+
 
 bool ampliar_tamanio_proceso(uint32_t pid, int tamanio)
 {
@@ -107,13 +106,11 @@ int completar_ultima_pagina(tabla_t *tabla, int tamanio)
 
 pagina_t *buscar_pagina_por_nro(tabla_t *tabla, int nro_pagina)
 {
-    nro_pagina_a_buscar = nro_pagina;
-    return list_find(tabla->paginas, (void *)pagina_por_nro);
-}
-
-bool pagina_por_nro(pagina_t *pagina)
+    bool pagina_por_nro(pagina_t *pagina)
 {
-    return (pagina->nro_pagina == nro_pagina_a_buscar);
+    return (pagina->nro_pagina == nro_pagina);
+}
+    return list_find(tabla->paginas, (void *)pagina_por_nro);
 }
 
 void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log *logger)
@@ -121,11 +118,7 @@ void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log *logger)
     tabla_t *tabla_proceso = tabla_paginas_por_pid(pid);
     pagina_t* primera_pagina = list_get(tabla_proceso->paginas, 0); 
     pagina_t* segunda_pagina = list_get(tabla_proceso->paginas, 1);
-    log_info(logger, "Primer pagina: %d", primera_pagina->nro_pagina);
-    log_info(logger, "Sgunda pagina: %d", segunda_pagina->nro_pagina);
-    log_info(logger, "Cantidad de paginas: %d", tabla_proceso->cantidad_paginas);
     tamanio = vaciar_ultima_pagina(tabla_proceso, tamanio);
-    log_info(logger, "Tamaño de la lista: %d", list_size(tabla_proceso->paginas));
     for (int i = tabla_proceso->cantidad_paginas - 1; (i >= 0) && tamanio > 0; i--)
     {
         pagina_t *pagina = list_get(tabla_proceso->paginas, i);
