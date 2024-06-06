@@ -13,6 +13,9 @@
 #include <commons/collections/queue.h>
 #include <commons/temporal.h>
 #include <semaphore.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <netdb.h>
 
 typedef struct {
     proceso_t* proceso;
@@ -32,7 +35,21 @@ typedef struct {
     uint32_t registro_tamanio;
     char* nombre_archivo;
     char* registro_puntero;
+    uint32_t cant_paginas;
+    char* direcciones_bytes;
 } proceso_a_interfaz_t;
+
+typedef struct {
+    char* nombre;
+    char* tipo;
+    t_list* cola;
+    pthread_mutex_t mutex_cola;
+    pthread_mutex_t mutex_exec;
+    sem_t sem_vuelta;
+    sem_t sem_eliminar_proceso;
+    int fin_de_proceso;
+    pthread_mutex_t mutex_fin_de_proceso;
+} interfaz_t;
 
 extern t_log* logger_kernel;
 extern char* puerto_memoria;
@@ -53,6 +70,7 @@ extern t_list* pcbs_ready;
 extern t_list* pcbs_ready_prioritarios;
 extern t_list* pcbs_exec;
 extern t_queue* pcbs_exit;
+extern t_list* interfaces;
 extern t_list* pcbs_generica;
 extern t_list* pcbs_stdin;
 extern t_list* pcbs_stdout;
@@ -69,7 +87,10 @@ extern pthread_mutex_t mutex_stdin_list;
 extern pthread_mutex_t mutex_stdin_exec;
 extern pthread_mutex_t mutex_stdout_list;
 extern pthread_mutex_t mutex_stdout_exec;
-extern pthread_mutex_t mutex_dialfs_list;
+extern pthread_mutex_t mutex_reanudar_planificacion;
+extern pthread_mutex_t mutex_planificacion_activa;
+extern pthread_mutex_t mutex_lista_interfaces;
+extern pthread_mutex_t mutex_disminuciones;
 extern pthread_mutex_t* mutex_recursos_list;
 extern pthread_mutex_t* mutex_recursos_instancias;
 extern sem_t multiprogramacion;
@@ -84,6 +105,7 @@ extern sem_t* pcb_esperando_recurso;
 extern sem_t vuelta_io_gen_sleep;
 extern sem_t vuelta_io_stdin_read;
 extern sem_t vuelta_io_stdout_write;
+extern sem_t sem_detener_planificacion;
 extern int procesos_activos;
 extern uint32_t pid_siguiente;
 extern int cpu_dispatch_fd;
@@ -98,7 +120,7 @@ void liberar_semaforos();
 void get_config(t_config* config); 
 int cantidadDeRecursos(char** instancias_string);
 extern void finalizar_proceso(proceso_t* proceso);
-extern void recibir_fin_de_sleep();
+extern void recibir_fin_de_sleep(interfaz_t* interfaz);
 extern void mostrar_pids_ready(t_list* ready_list, char* cola);
 extern uint32_t _get_pid(proceso_t* proceso);
 extern void finalizar_proceso_de_pid(uint32_t pid_proceso);
@@ -108,11 +130,19 @@ extern void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion
 extern int disminuciones_multiprogramacion;
 extern void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiempo_en_cpu, t_temporal* timer);
 extern void entrar_a_exit(proceso_t* proceso);
-extern void enviar_proceso_a_signal(proceso_t* proceso, char* recurso_signal);
-extern void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, char* interfaz, void (*hacer_peticion)(proceso_a_interfaz_t*));
-extern void hacer_io_stdin_read(proceso_a_interfaz_t* proceso_interfaz);
-extern void hacer_io_stdout_write(proceso_a_interfaz_t* proceso_interfaz);
+extern void enviar_proceso_a_signal(proceso_t* proceso, char* recurso_signal, uint32_t tiempo_en_cpu, t_temporal* timer);
+extern void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, char* interfaz, void (*hacer_peticion)(proceso_a_interfaz_t*, interfaz_t*));
+extern void hacer_io_gen_sleep(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
+extern void hacer_io_stdin_read(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
+extern void hacer_io_stdout_write(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
 extern void ejecutar_proceso(proceso_t* proceso, t_log* logger, int quantum);
 extern void liberar_cpu();
 extern void ingresar_a_exec();
+extern char* interfaz_a_consultar;
+extern interfaz_t* buscar_interfaz(char* nombre);
+extern int planificacion_activa;
+extern int reanudar_planificacion;
+extern void verificar_detencion_de_planificacion();
+extern void iniciar_planificacion();
+extern proceso_t* proceso_a_verificar;
 #endif

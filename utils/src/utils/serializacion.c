@@ -22,3 +22,11 @@ void agregar_string(void* stream, int* offset, char* string) {
     memcpy((char*) stream + (*offset), string, tamanio);
     *offset += tamanio;
 }
+
+void agregar_string_sin_barra0(void* stream, int* offset, char* string) {
+    size_t tamanio = string_length(string);
+    memcpy(stream + (*offset), &tamanio, sizeof(uint32_t));
+    *offset += sizeof(uint32_t);
+    memcpy((char*) stream + (*offset), string, tamanio);
+    *offset += tamanio;
+}

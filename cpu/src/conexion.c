@@ -1,188 +1,252 @@
 #include <../include/conexion.h>
 
 uint32_t pid_interrumpido;
+uint32_t pid_a_finalizar;
 
-void procesar_conexion_interrupt(void* args_void) {
-    conexion_args_t* args = (conexion_args_t*) args_void;
+void procesar_conexion_interrupt(void *args_void)
+{
+    conexion_args_t *args = (conexion_args_t *)args_void;
     int socket_cliente = args->socket_cliente;
-    t_log* logger = args->logger;
+    t_log *logger = args->logger;
     free(args);
 
     op_code opcode;
-    while (socket_cliente != 1) {
-        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
+    while (socket_cliente != 1)
+    {
+        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code))
+        {
             log_info(logger, "Tiro error");
             return;
         }
-
-        switch(opcode) {
-            case INTERRUMPIR:
-                pid_interrumpido = recibir_interrupcion(socket_cliente);
-            default:
-               
+        switch (opcode)
+        {
+        case INTERRUMPIR:
+            pid_interrumpido = recibir_interrupcion(socket_cliente);
+            break;
+        case FINALIZAR_PROCESO:
+            pid_a_finalizar = recibir_interrupcion(socket_cliente);
+            break;
+        default:
         }
     }
     return;
 }
 
-void procesar_conexion_dispatch(void* args_void) {
-    conexion_args_t* args = (conexion_args_t*) args_void;
+void procesar_conexion_dispatch(void *args_void)
+{
+    conexion_args_t *args = (conexion_args_t *)args_void;
     int socket_cliente = args->socket_cliente;
-    t_log* logger = args->logger;
+    t_log *logger = args->logger;
     free(args);
     op_code opcode;
-    while (socket_cliente != 1) {
-        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
+    while (socket_cliente != 1)
+    {
+        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code))
+        {
             log_info(logger, "Tiro error");
             return;
         }
-        
-        switch(opcode) {
-            case ENVIAR_PCB:    
-                proceso_t* pcb = malloc(sizeof(proceso_t));  
-                pcb->registros = malloc(sizeof(registros_t));
-                recibir_pcb(socket_cliente, pcb, logger);
-                log_info(logger, "PCB->PC: %d", pcb->registros->PC);
-                memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
-                while (1)
+        switch (opcode)
+        {
+        case ENVIAR_PCB:
+            pcb_t *pcb = malloc(sizeof(pcb_t));
+            pcb->registros = malloc(sizeof(registros_t));
+            recibir_pcb(socket_cliente, pcb, logger);
+            log_info(logger, "PCB->PC: %d", pcb->registros->PC);
+            memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
+            while (1)
+            {
+                log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
+                enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
+                char *instruccion = recibir_instruccion(memoria_fd);
+                if (!ejecutar_instruccion(instruccion, logger, pcb, socket_cliente))
                 {
-                    log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
-                    enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
-                    char* instruccion = recibir_instruccion(memoria_fd);
-                    if(!ejecutar_instruccion(instruccion, logger, pcb, socket_cliente)) {
-                        free(instruccion);
-                        break;
-                    }
-                    registros_cpu->PC++;
                     free(instruccion);
-                    if(hay_interrupcion(pcb->pid)){
-                        enviar_contexto(socket_cliente, pcb, "TIMER");
-                        pid_interrumpido = -1;
-                        break;
+                    
+                    if (es_proceso_a_finalizar(pcb->pid))
+                    {
+                        enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
                     }
-                    pid_interrumpido = -1;
+                    break;
+                    
                 }
-                free(pcb->registros);
-                free(pcb);
-                log_info(logger, "AX: %u", registros_cpu->AX);
-                log_info(logger, "BX: %u", registros_cpu->BX);
-                break;
-            default:
-                break;
+                
+                if (es_proceso_a_finalizar(pcb->pid))
+                {
+                    enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
+                    break;
+                }
+                
+                registros_cpu->PC++;
+                free(instruccion);
+                if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid))
+                {
+                    enviar_contexto(socket_cliente, pcb, "TIMER");
+                    pid_interrumpido = -1;
+                    break;
+                }
+                pid_interrumpido = -1;
+            }
+            free(pcb->registros);
+            free(pcb);
+            log_info(logger, "AX: %u", registros_cpu->AX);
+            log_info(logger, "BX: %u", registros_cpu->BX);
+            break;
+        case SIGNAL:
+            flag_sigue_en_exec = 1;
+            sem_post(&fin_pedido_recursos);
+            break;  
+        case BLOQUEADO_RECURSO:
+            flag_sigue_en_exec = 0;
+            sem_post(&fin_pedido_recursos);
+            break;
+        default:
+            break;
         }
     }
     return;
 }
 
-int ejecutar_instruccion(char* instruccion, t_log* logger, proceso_t* pcb, int socket) {
-    
-    char** substrings = string_split(instruccion, " ");
-    char* comando = substrings[0];
+int ejecutar_instruccion(char *instruccion, t_log *logger, pcb_t *pcb, int socket)
+{
+
+    char **substrings = string_split(instruccion, " ");
+    char *comando = substrings[0];
     op_code opcode = string_to_opcode(comando);
-    char* registro_dest;
-    char* registro_orig;
+    char *registro_dest;
+    char *registro_orig;
     uint32_t valor_dest;
     uint32_t valor_orig;
-    //uint8_t valor_dest;
-    //uint8_t valor_orig;
+    // uint8_t valor_dest;
+    // uint8_t valor_orig;
 
-    switch(opcode) {
-        case SET:
-            registro_dest = substrings[1];
-            valor_dest = atoi(substrings[2]);
-            set_registros(registro_dest, valor_dest);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %u>", pcb->pid, comando, registro_dest, valor_dest);
-            return 1;
-        case MOV_IN:
+    switch (opcode)
+    {
+    case SET:
+        registro_dest = substrings[1];
+        valor_dest = atoi(substrings[2]);
+        set_registros(registro_dest, valor_dest);
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %u>", pcb->pid, comando, registro_dest, valor_dest);
         return 1;
-        case MOV_OUT:
-            registro_dest = substrings[1];
-            registro_orig = substrings[2];
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            //uint16_t pagina = pagina_direccion_logica(registro_dest);
-            //uint16_t desplazamiento = desplazamiento_direccion_logica(registro_dest);
+    case MOV_IN:
+        return 1;
+    case MOV_OUT:
+        registro_dest = substrings[1];
+        registro_orig = substrings[2];
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
+        // uint16_t pagina = pagina_direccion_logica(registro_dest);
+        // uint16_t desplazamiento = desplazamiento_direccion_logica(registro_dest);
 
-            return 1;
-        case SUM:
-            registro_dest = substrings[1];
-            registro_orig = substrings[2];
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            valor_dest = get_valor_registro(registro_dest);
-            valor_orig = get_valor_registro(registro_orig);
-            set_registros(registro_dest, valor_dest + valor_orig);
-            return 1;
-        case SUB:
-            registro_dest = substrings[1];
-            registro_orig = substrings[2];
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-            valor_dest = get_valor_registro(registro_dest);
-            valor_orig = get_valor_registro(registro_orig);
-            log_info(logger, "1: %d, 2: %d", valor_dest, valor_orig);
-            set_registros(registro_dest, valor_dest - valor_orig);
-            return 1;
-        case JNZ:
-            registro_orig = substrings[1];
-            valor_dest = atoi(substrings[2]);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, registro_orig, valor_dest);
-            valor_orig = get_valor_registro(registro_orig);
-            if(valor_orig != 0) {
-                set_registros("PC", valor_dest);
-            }
         return 1;
-        case RESIZE:
-            valor_dest = atoi(substrings[1]);
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, valor_dest);
-            enviar_resize(valor_dest, pcb->pid);     
-            op_code resize_response;
-            recv(memoria_fd, &resize_response, sizeof(op_code), 0);
-            if(resize_response == OUTOFMEMORY) {
-                enviar_contexto(socket, pcb, OUTOFMEMORY);
-                return 0;
-            }
-            return 1;
-        case COPY_STRING:
+    case SUM:
+        registro_dest = substrings[1];
+        registro_orig = substrings[2];
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
+        valor_dest = get_valor_registro(registro_dest);
+        valor_orig = get_valor_registro(registro_orig);
+        set_registros(registro_dest, valor_dest + valor_orig);
         return 1;
-        case WAIT:
+    case SUB:
+        registro_dest = substrings[1];
+        registro_orig = substrings[2];
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
+        valor_dest = get_valor_registro(registro_dest);
+        valor_orig = get_valor_registro(registro_orig);
+        log_info(logger, "1: %d, 2: %d", valor_dest, valor_orig);
+        set_registros(registro_dest, valor_dest - valor_orig);
+        return 1;
+    case JNZ:
+        registro_orig = substrings[1];
+        valor_dest = atoi(substrings[2]);
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, registro_orig, valor_dest);
+        valor_orig = get_valor_registro(registro_orig);
+        if (valor_orig != 0)
+        {
+            set_registros("PC", valor_dest);
+        }
+        return 1;
+    case RESIZE:
+        valor_dest = atoi(substrings[1]);
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, valor_dest);
+        enviar_resize(valor_dest, pcb->pid);
+        op_code resize_response;
+        recv(memoria_fd, &resize_response, sizeof(op_code), 0);
+        if (resize_response == OUTOFMEMORY)
+        {
             enviar_contexto(socket, pcb, instruccion);
             return 0;
-        case SIGNAL:
-            enviar_contexto(socket, pcb, instruccion);
-            return 0;
-        case IO_GEN_SLEEP:
-            registro_orig = substrings[1];
-            registro_dest = substrings[2];
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_orig, registro_dest);
+        }
+        return 1;
+    case COPY_STRING:
+        return 1;
+    case WAIT:
+        enviar_contexto(socket, pcb, instruccion);
+        sem_wait(&fin_pedido_recursos);
+        if (flag_sigue_en_exec == 1)
+        {
+            return 1;
+        }
+        else
+        {
             registros_cpu->PC++;
-            enviar_contexto(socket, pcb, instruccion);
             return 0;
-        case IO_STDIN_READ:
-        return 1;
-        case IO_STDOUT_WRITE:
-        return 1;
-        case IO_FS_CREATE:
-        return 1;
-        case IO_FS_DELETE:
-        return 1;
-        case IO_FS_TRUNCATE:
-        return 1;
-        case IO_FS_WRITE:
-        return 1;
-        case IO_FS_READ:
-        return 1;
-        case EXIT:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
-            enviar_contexto(socket, pcb, instruccion);
+        }
+
+    case SIGNAL:
+        enviar_contexto(socket, pcb, instruccion);
+        sem_wait(&fin_pedido_recursos);
+        if (flag_sigue_en_exec == 1)
+        {
+            return 1;
+        }
+        else
+        {
+            registros_cpu->PC++;
             return 0;
+        }
+
+    case IO_GEN_SLEEP:
+        registro_orig = substrings[1];
+        registro_dest = substrings[2];
+        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_orig, registro_dest);
+        registros_cpu->PC++;
+        enviar_contexto(socket, pcb, instruccion);
+        return 0;
+    case IO_STDIN_READ:
+        return 1;
+    case IO_STDOUT_WRITE:
+        return 1;
+    case IO_FS_CREATE:
+        return 1;
+    case IO_FS_DELETE:
+        return 1;
+    case IO_FS_TRUNCATE:
+        return 1;
+    case IO_FS_WRITE:
+        return 1;
+    case IO_FS_READ:
+        return 1;
+    case EXIT:
+        log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
+        enviar_contexto(socket, pcb, instruccion);
+        return 0;
     }
     string_split_free(&substrings);
 }
 
-bool hay_interrupcion(uint32_t pid) {
+bool hay_interrupcion(uint32_t pid)
+{
     return pid_interrumpido == pid;
 }
 
-void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
-    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(op_code));
+bool es_proceso_a_finalizar(uint32_t pid)
+{
+    return pid_a_finalizar == pid;
+}
+
+void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket)
+{
+    void *stream = malloc(sizeof(uint32_t) * 2 + sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, FETCH);
     agregar_uint32_t(stream, &offset, pid);
@@ -191,7 +255,8 @@ void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
     free(stream);
 }
 
-void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
+void recibir_pcb(int socket, pcb_t *pcb, t_log *logger)
+{
     uint32_t pid;
     uint32_t quantum;
     uint32_t PC;
@@ -233,24 +298,27 @@ void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
     pcb->registros->DI = DI;
 }
 
-char* recibir_instruccion(int socket) {
+char *recibir_instruccion(int socket)
+{
     uint32_t size;
     recv(socket, &size, sizeof(uint32_t), 0);
-    char* instruccion = malloc(size);
+    char *instruccion = malloc(size);
     recv(socket, instruccion, size, 0);
     return instruccion;
 }
 
-uint32_t recibir_interrupcion(int socket) {
-    uint32_t pid_interrumpido_recv; 
-    recv(socket, &pid_interrumpido_recv, sizeof(uint32_t), 0); 
+uint32_t recibir_interrupcion(int socket)
+{
+    uint32_t pid_interrumpido_recv;
+    recv(socket, &pid_interrumpido_recv, sizeof(uint32_t), 0);
     return pid_interrumpido_recv;
 }
 
-void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
-    memcpy(pcb->registros, registros_cpu, sizeof(register_t));
+void enviar_contexto(int socket, pcb_t *pcb, char *instruccion)
+{
+    memcpy(pcb->registros, registros_cpu, sizeof(registros_t));
     uint32_t tamanio = string_length(instruccion) + 1;
-    void* stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
+    void *stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
     int offset = 0;
     agregar_uint32_t(stream, &offset, pcb->pid);
     agregar_uint32_t(stream, &offset, pcb->quantum);
@@ -270,61 +338,107 @@ void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
     free(stream);
 }
 
-void set_registros(char* registro_dest, uint32_t valor) {
-    if (strcmp(registro_dest, "AX") == 0) {
+void set_registros(char *registro_dest, uint32_t valor)
+{
+    if (strcmp(registro_dest, "AX") == 0)
+    {
         registros_cpu->AX = valor;
-    } else if (strcmp(registro_dest, "BX") == 0) {
+    }
+    else if (strcmp(registro_dest, "BX") == 0)
+    {
         registros_cpu->BX = valor;
-    } else if (strcmp(registro_dest, "CX") == 0) {
+    }
+    else if (strcmp(registro_dest, "CX") == 0)
+    {
         registros_cpu->CX = valor;
-    } else if (strcmp(registro_dest, "DX") == 0) {
+    }
+    else if (strcmp(registro_dest, "DX") == 0)
+    {
         registros_cpu->DX = valor;
-    } else if (strcmp(registro_dest, "EAX") == 0) {
+    }
+    else if (strcmp(registro_dest, "EAX") == 0)
+    {
         registros_cpu->EAX = valor;
-    } else if (strcmp(registro_dest, "EBX") == 0) {
+    }
+    else if (strcmp(registro_dest, "EBX") == 0)
+    {
         registros_cpu->EBX = valor;
-    } else if (strcmp(registro_dest, "ECX") == 0) {
+    }
+    else if (strcmp(registro_dest, "ECX") == 0)
+    {
         registros_cpu->ECX = valor;
-    } else if (strcmp(registro_dest, "EDX") == 0) {
+    }
+    else if (strcmp(registro_dest, "EDX") == 0)
+    {
         registros_cpu->EDX = valor;
-    } else if (strcmp(registro_dest, "PC") == 0) {
-        registros_cpu->PC = valor-1;
-    } else if (strcmp(registro_dest, "SI") == 0) {
+    }
+    else if (strcmp(registro_dest, "PC") == 0)
+    {
+        registros_cpu->PC = valor - 1;
+    }
+    else if (strcmp(registro_dest, "SI") == 0)
+    {
         registros_cpu->SI = valor;
-    } else if (strcmp(registro_dest, "DI") == 0) {
+    }
+    else if (strcmp(registro_dest, "DI") == 0)
+    {
         registros_cpu->DI = valor;
     }
 }
 
-uint32_t get_valor_registro(char* registro) {
-    if(registro[strlen(registro) -1] == '\n') registro[strlen(registro) -1] = '\0';
-    if (strcmp(registro, "AX") == 0) {
+uint32_t get_valor_registro(char *registro)
+{
+    if (registro[strlen(registro) - 1] == '\n')
+        registro[strlen(registro) - 1] = '\0';
+    if (strcmp(registro, "AX") == 0)
+    {
         return registros_cpu->AX;
-    } else if (strcmp(registro, "BX") == 0) {
+    }
+    else if (strcmp(registro, "BX") == 0)
+    {
         return registros_cpu->BX;
-    } else if (strcmp(registro, "CX") == 0) {
+    }
+    else if (strcmp(registro, "CX") == 0)
+    {
         return registros_cpu->CX;
-    } else if (strcmp(registro, "DX") == 0) {
+    }
+    else if (strcmp(registro, "DX") == 0)
+    {
         return registros_cpu->DX;
-    } else if (strcmp(registro, "EAX") == 0) {
+    }
+    else if (strcmp(registro, "EAX") == 0)
+    {
         return registros_cpu->EAX;
-    } else if (strcmp(registro, "EBX") == 0) {
+    }
+    else if (strcmp(registro, "EBX") == 0)
+    {
         return registros_cpu->EBX;
-    } else if (strcmp(registro, "ECX") == 0) {
+    }
+    else if (strcmp(registro, "ECX") == 0)
+    {
         return registros_cpu->ECX;
-    } else if (strcmp(registro, "EDX") == 0) {
+    }
+    else if (strcmp(registro, "EDX") == 0)
+    {
         return registros_cpu->EDX;
-    } else if (strcmp(registro, "PC") == 0) {
+    }
+    else if (strcmp(registro, "PC") == 0)
+    {
         return registros_cpu->PC;
-    } else if (strcmp(registro, "SI") == 0) {
+    }
+    else if (strcmp(registro, "SI") == 0)
+    {
         return registros_cpu->SI;
-    } else if (strcmp(registro, "DI") == 0) {
+    }
+    else if (strcmp(registro, "DI") == 0)
+    {
         return registros_cpu->DI;
     }
 }
 
-void enviar_resize(uint32_t tamanio, uint32_t pid) {
-    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(op_code));
+void enviar_resize(uint32_t tamanio, uint32_t pid)
+{
+    void *stream = malloc(sizeof(uint32_t) * 2 + sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, RESIZE);
     agregar_uint32_t(stream, &offset, tamanio);

@@ -20,14 +20,16 @@ int block_size;
 int block_count;
 int kernel_fd;
 int memoria_fd;
-void conectar_a_kernel();
+char* nombre;
+void conectar_a_kernel(char* nombre);
 void atender_pedidos_kernel();
 void generica_atender_kernel();
 void stdin_atender_kernel();
 void stdout_atender_kernel();
 void dialfs_atender_kernel();
 void fin_de(op_code opcode);
-void enviar_pedido_stdinout(op_code opcode , uint32_t proceso_pid, uint32_t registro_direccion, uint32_t registro_tamanio)
+void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes, char* leido);
+void enviar_pedido_stdout(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes);
 
 
 

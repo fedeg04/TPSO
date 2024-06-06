@@ -20,5 +20,6 @@ void agregar_opcode(void* stream, int* offset, op_code op_code);
 void agregar_uint32_t(void* stream, int* offset, uint32_t uint32);
 void agregar_uint8_t(void* stream, int* offset, uint8_t uint8);
 void agregar_string(void* stream, int* offset, char* string);
+void agregar_string_sin_barra0(void* stream, int* offset, char* string);
 
 #endif

@@ -6,6 +6,7 @@
 #include <../include/init.h>
 #include <../include/conexion.h>
 #include <../include/serializacion.h>
+#include <semaphore.h>
 
 int cpu_dispatch_fd;
 int cpu_interrupt_fd;
@@ -19,5 +20,9 @@ int cantidad_entradas_tlb;
 char* algoritmo_tlb;
 int servers_escuchar();
 registros_t* registros_cpu;
+sem_t fin_pedido_recursos;
+void inicializar_semaforos();
+void liberar_semaforos();
+int flag_sigue_en_exec;
 
 #endif
