@@ -25,8 +25,11 @@ void pedir_marcos(uint32_t pid, uint8_t cant_paginas_enviar, uint32_t nro_pagina
 void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento);
 char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, uint16_t desplazamiento);
 uint32_t cant_bytes(char* registro);
-bool respuesta_memoria(proceso_t* pcb, int socket);
+bool respuesta_memoria(proceso_t* pcb, int socket_cliente);
+bool respuesta_memoria_escribir(proceso_t* pcb, int socket_cliente, uint8_t cant_pags);
 uint32_t enviar_mov_in(uint8_t cant_pags, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento);
 uint32_t recibir_mov_in(uint32_t cantidad_bytes);
+void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket);
+void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes);
 
 #endif

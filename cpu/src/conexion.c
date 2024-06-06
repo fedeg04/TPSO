@@ -128,7 +128,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             uint8_t cant_paginas_enviar = cantidad_paginas_enviar(cantidad_bytes, primer_valor);
             pedir_marcos(pcb->pid, cant_paginas_enviar, pagina_direccion_logica(primer_valor));
             enviar_mov_out(segundo_valor, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(primer_valor));
-            return respuesta_memoria(pcb, socket);
+            return respuesta_memoria_escribir(pcb, socket, cant_paginas_enviar);
         case SUM:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             set_registros(primer_parametro, primer_valor + segundo_valor);
@@ -150,7 +150,18 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             enviar_resize(primer_valor, pcb->pid);
             return respuesta_memoria(pcb, socket);
         case COPY_STRING:
-        return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
+            uint8_t cant_pags_leer = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("SI"));
+            pedir_marcos(pcb->pid, cant_pags_leer, pagina_direccion_logica(get_valor_registro("SI")));
+            char* leido = malloc(1);
+            leido[0] = '\0';
+            leer_string(leido, cant_pags_leer, desplazamiento_direccion_logica(get_valor_registro("SI")), pcb->pid, atoi(primer_parametro));
+            leido[atoi(primer_parametro)] = '\0';
+            log_info(logger, "Que carajo se lee: %s", leido);
+            uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
+            pedir_marcos(pcb->pid, cant_pags_escribir, pagina_direccion_logica(get_valor_registro("DI")));
+            escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro));
+            return respuesta_memoria_escribir(pcb, socket, cant_pags_escribir);
         case WAIT:
             enviar_contexto(socket, pcb, instruccion);
             return 0;
@@ -166,18 +177,14 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
             uint8_t cant_paginas_read = cantidad_paginas_enviar(tercer_valor, segundo_valor);
             pedir_marcos(pcb->pid, cant_paginas_read, pagina_direccion_logica(segundo_valor));
-            char* io_stdin_a_kernel = malloc(strlen(primer_parametro) + 1);
-            strcpy(io_stdin_a_kernel, primer_parametro);
-            char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor));
-            string_append(&io_stdin_a_kernel, " ");
-            string_append(&io_stdin_a_kernel, envio_direcciones_tamanios);
-            log_info(logger, "String: %s", io_stdin_a_kernel);
-            enviar_contexto(socket, pcb, io_stdin_a_kernel);
-            free(io_stdin_a_kernel);
-            free(envio_direcciones_tamanios);
+            envio_kernel_io(IO_STDIN_READ, primer_parametro, cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket);
             return 0;
         case IO_STDOUT_WRITE:
-        return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            uint8_t cant_paginas_write = cantidad_paginas_enviar(tercer_valor, segundo_valor);
+            pedir_marcos(pcb->pid, cant_paginas_write, pagina_direccion_logica(segundo_valor));
+            envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket);
+            return 0;
         case IO_FS_CREATE:
         return 1;
         case IO_FS_DELETE:
@@ -363,66 +370,62 @@ void enviar_resize(uint32_t tamanio, uint32_t pid) {
 }
 
 void pedir_marcos(uint32_t pid, uint8_t cant_paginas_enviar, uint32_t nro_pagina) {
-    void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t)*2);
-    int offset = 0;
-    agregar_opcode(stream, &offset, PEDIR_MARCO);
-    agregar_uint32_t(stream, &offset, pid);
-    agregar_uint8_t(stream, &offset, cant_paginas_enviar);
-    agregar_uint32_t(stream, &offset, nro_pagina);
-    send(memoria_fd, stream, offset, 0);
-    free(stream);
+    for (int i = nro_pagina; i < nro_pagina + cant_paginas_enviar; i++)
+    {
+        //BUSCAR EN TLB
+        //TLB HIT =>
+        
+        //TLB MISS =>
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t)*2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, PEDIR_MARCO);
+        agregar_uint32_t(stream, &offset, pid);
+        agregar_uint32_t(stream, &offset, i);
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+    }
 }
 
 void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento) {
-    void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t));
-    int offset = 0;
-    agregar_opcode(stream, &offset, ESCRIBIR);
-    agregar_uint8_t(stream, &offset, cant_pags_a_enviar);
-    agregar_uint32_t(stream, &offset, pid);
     uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
-    uint16_t marco;
-    recv(memoria_fd, &marco, sizeof(uint16_t), 0);
-    uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
-    if(cant_pags_a_enviar == 1) {
-        stream = realloc(stream, offset + sizeof(uint16_t) * 2 + cant_bytes);
-        agregar_uint16_t(stream, &offset, direccion_fisica);
-        agregar_uint16_t(stream, &offset, cant_bytes);
-        void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
-        uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
-        for (int i = 0; i < cant_bytes; i++)
-        {
-            uint8_t envio = *(valor_uint_ptr - i);
-            agregar_uint8_t(stream, &offset, envio);
-        }
-    } else {
-        desplazamiento = 0;
-        stream = realloc(stream, offset + sizeof(uint16_t)*4 + cant_bytes);
-        agregar_uint16_t(stream, &offset, direccion_fisica);
-        agregar_uint16_t(stream, &offset, bytes_restantes);
-        void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
-        uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
-        for (int i = 0; i < bytes_restantes; i++)
-        {
-            uint8_t envio = *(valor_uint_ptr - i);
-            agregar_uint8_t(stream, &offset, envio);
-        }
-        valor_ptr = valor_ptr - bytes_restantes;
-        bytes_restantes = cant_bytes - bytes_restantes;
+    void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
+    for (int i = 0; i < cant_pags_a_enviar; i++)
+    {
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t)*2);
+        int offset = 0;
+        uint16_t marco;
         recv(memoria_fd, &marco, sizeof(uint16_t), 0);
-        direccion_fisica = marco*tamanio_pagina + desplazamiento;
-
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        agregar_opcode(stream, &offset, ESCRIBIR);
+        agregar_uint32_t(stream, &offset, pid);
         agregar_uint16_t(stream, &offset, direccion_fisica);
-        agregar_uint16_t(stream, &offset, bytes_restantes);
-        valor_uint_ptr = (uint8_t*)valor_ptr;
-        for (int i = 0; i < bytes_restantes; i++)
-        {
-            uint8_t envio = *(valor_uint_ptr - i);
-            agregar_uint8_t(stream, &offset, envio);
+        if(cant_pags_a_enviar == 1) {
+            stream = realloc(stream, offset + cant_bytes);
+            agregar_uint16_t(stream, &offset, cant_bytes);
+            void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
+            uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
+            for (int i = 0; i < cant_bytes; i++)
+            {
+                uint8_t envio = *(valor_uint_ptr - i);
+                agregar_uint8_t(stream, &offset, envio);
+            }
+            send(memoria_fd, stream, offset, 0);
+        } else {
+            stream = realloc(stream, offset + bytes_restantes);
+            desplazamiento = 0;
+            agregar_uint16_t(stream, &offset, bytes_restantes);
+            uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
+            for (int j = 0; j < bytes_restantes; j++)
+            {
+                uint8_t envio = *(valor_uint_ptr - j);
+                agregar_uint8_t(stream, &offset, envio);
+            }
+            valor_ptr = valor_ptr - bytes_restantes;
+            bytes_restantes = cant_bytes - bytes_restantes;
+            send(memoria_fd, stream, offset, 0);
         }
-    }
-       
-    send(memoria_fd, stream, offset, 0);
-    free(stream);
+        free(stream);
+    }    
 }
 
 uint32_t cant_bytes(char* registro) {
@@ -440,6 +443,19 @@ bool respuesta_memoria(proceso_t* pcb, int socket_cliente) {
         enviar_contexto(socket_cliente, pcb, OUTOFMEMORY);
         return 0;
     }   
+    return 1;
+}
+
+bool respuesta_memoria_escribir(proceso_t* pcb, int socket_cliente, uint8_t cant_pags) {
+    op_code mov_out_response;
+    for (int i = 0; i < cant_pags; i++)
+    {
+        recv(memoria_fd, &mov_out_response, sizeof(op_code), 0);
+        if(mov_out_response != MSG) {
+            enviar_contexto(socket_cliente, pcb, OUTOFMEMORY);
+            return 0;
+        }   
+    }
     return 1;
 }
 
@@ -518,3 +534,81 @@ char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, ui
     return direcciones_tamanios;
 }
 
+void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket) {
+    char* io_stdin_a_kernel = malloc(strlen(interfaz) + 1);
+    strcpy(io_stdin_a_kernel, interfaz);
+    char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas_read, tamanio, desplazamiento);
+    string_append(&io_stdin_a_kernel, " ");
+    string_append(&io_stdin_a_kernel, envio_direcciones_tamanios);
+    enviar_contexto(socket, pcb, io_stdin_a_kernel);
+    free(io_stdin_a_kernel);
+    free(envio_direcciones_tamanios);
+}
+
+void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes) {
+    uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
+    uint16_t bytes_utilizados = 0;
+    for (int i = 0; i < cant_pags; i++)
+    {
+        if(bytes_restantes > tamanio_pagina) {
+            bytes_restantes = tamanio_pagina;
+        }
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t)*2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, LEER);
+        agregar_uint32_t(stream, &offset, pid);
+        uint16_t marco;
+        recv(memoria_fd, &marco, sizeof(uint16_t), 0);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        if(cant_pags == 1) {
+            bytes_restantes = cant_bytes;
+        }
+        agregar_uint16_t(stream, &offset, direccion_fisica);
+        agregar_uint16_t(stream, &offset, bytes_restantes);
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+        bytes_utilizados += bytes_restantes;
+        bytes_restantes = cant_bytes - bytes_utilizados;
+        desplazamiento = 0;
+    }
+    for (int i = 0; i < cant_pags; i++)
+    {
+        uint16_t cant_bytes_leer;
+        recv(memoria_fd, &cant_bytes_leer, sizeof(uint16_t), 0);
+        char* lectura_parcial = malloc(cant_bytes_leer + 1);
+        recv(memoria_fd, lectura_parcial, cant_bytes_leer, 0);
+        lectura_parcial[cant_bytes_leer] = '\0';
+        string_append(&lectura, lectura_parcial);
+        free(lectura_parcial);
+    }
+}
+
+void escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes) {
+    uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
+    uint8_t bytes_utilizados = 0;
+    for (int i = 0; i < cant_pags; i++)
+    {
+        uint16_t marco;
+        recv(memoria_fd, &marco, sizeof(uint16_t), 0);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) * 2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, ESCRIBIR);
+        agregar_uint32_t(stream, &offset, pid);
+        agregar_uint16_t(stream, &offset, direccion_fisica);
+        if(bytes_restantes > tamanio_pagina) {
+            bytes_restantes = tamanio_pagina;
+        }
+        if (cant_pags == 1)
+        {
+            bytes_restantes = cant_bytes;
+        }
+        stream = realloc(stream, offset + bytes_restantes);
+        agregar_string_sin_barra0(stream, &offset, mensaje);
+        bytes_utilizados += bytes_restantes;
+        bytes_restantes = cant_bytes - bytes_utilizados;
+        desplazamiento = 0;
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+    }
+}
