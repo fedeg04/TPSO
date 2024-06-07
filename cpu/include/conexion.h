@@ -21,15 +21,16 @@ void set_registros(char* registro, uint32_t valor);
 uint32_t get_valor_registro(char* registro);
 void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket);
 bool hay_interrupcion(uint32_t pid);
-void pedir_marcos(uint32_t pid, uint8_t cant_paginas_enviar, uint32_t nro_pagina);
-void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento);
-char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, uint16_t desplazamiento);
+uint16_t pedir_marco(uint32_t pid, uint32_t nro_pagina, t_log* logger);
+void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento, uint32_t nro_pagina, t_log* logger);
+char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, uint16_t desplazamiento, uint32_t nro_pagina, uint32_t pid, t_log* logger);
 uint32_t cant_bytes(char* registro);
 bool respuesta_memoria(proceso_t* pcb, int socket_cliente);
 bool respuesta_memoria_escribir(proceso_t* pcb, int socket_cliente, uint8_t cant_pags);
-uint32_t enviar_mov_in(uint8_t cant_pags, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento);
+uint32_t enviar_mov_in(uint8_t cant_pags, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento, uint32_t nro_pagina, t_log* logger);
 uint32_t recibir_mov_in(uint32_t cantidad_bytes);
-void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket);
-void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes);
+void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket, uint32_t nro_pagina, t_log* logger);
+void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger);
+void escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger);
 
 #endif

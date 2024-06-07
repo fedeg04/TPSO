@@ -6,6 +6,8 @@
 #include <../include/init.h>
 #include <../include/conexion.h>
 #include <../include/serializacion.h>
+#include <../include/tlb.h>
+
 
 int cpu_dispatch_fd;
 int cpu_interrupt_fd;
@@ -20,5 +22,7 @@ char* algoritmo_tlb;
 int tamanio_pagina;
 int servers_escuchar();
 registros_t* registros_cpu;
+tlb_t* tlb;
+t_queue* cola_fifo_tlb;
 
 #endif

@@ -26,6 +26,9 @@ int main(int argc, char *argv[])
     get_config(config_cpu);
 
     registros_cpu = inicializar_registros();
+    
+    inicializar_tlb();
+
 
     // Se conecta como cliente a la memoria
     memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);

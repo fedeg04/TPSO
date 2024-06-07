@@ -1,7 +1,7 @@
 #include <../include/mmu.h>
 
-uint16_t pagina_direccion_logica(uint32_t direccion_logica) {
-    return (uint16_t)floor(direccion_logica/tamanio_pagina);
+uint32_t pagina_direccion_logica(uint32_t direccion_logica) {
+    return (uint32_t)floor(direccion_logica/tamanio_pagina);
 }
 
 uint16_t desplazamiento_direccion_logica(uint32_t direccion_logica) {
