@@ -26,6 +26,14 @@ void procesar_conexion_interrupt(void *args_void)
         case FINALIZAR_PROCESO:
             pid_a_finalizar = recibir_interrupcion(socket_cliente);
             break;
+        case PEDIDO_RECURSO:
+            flag_sigue_en_exec = 1;
+            sem_post(&fin_pedido_recursos);
+            break;  
+        case BLOQUEADO_RECURSO:
+            flag_sigue_en_exec = 0;
+            sem_post(&fin_pedido_recursos);
+            break;
         default:
         }
     }
@@ -91,14 +99,6 @@ void procesar_conexion_dispatch(void *args_void)
             free(pcb);
             log_info(logger, "AX: %u", registros_cpu->AX);
             log_info(logger, "BX: %u", registros_cpu->BX);
-            break;
-        case SIGNAL:
-            flag_sigue_en_exec = 1;
-            sem_post(&fin_pedido_recursos);
-            break;  
-        case BLOQUEADO_RECURSO:
-            flag_sigue_en_exec = 0;
-            sem_post(&fin_pedido_recursos);
             break;
         default:
             break;

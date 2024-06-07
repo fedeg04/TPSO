@@ -182,8 +182,6 @@ int indice = posicion_de_recurso(recurso_signal);
 
 void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, char* tipo_interfaz, void (*hacer_peticion)(proceso_a_interfaz_t*, interfaz_t*)) {
     interfaz_t* interfaz_solicitada = buscar_interfaz(proceso_a_interfaz->interfaz);
-    log_info(logger_kernel, "TIPO SOL.: %s", tipo_interfaz);
-    log_info(logger_kernel, "TIPO SOLICITADA.: %s", interfaz_solicitada->tipo);
     if(interfaz_solicitada != NULL) {
         if(estaConectada(proceso_a_interfaz->interfaz)) {
             if(!strcmp(tipo_interfaz, interfaz_solicitada->tipo)){
@@ -313,8 +311,8 @@ void volver_a_exec(proceso_t* proceso, uint32_t tiempo_en_cpu, t_temporal* timer
     }
     void* stream = malloc(sizeof(op_code));
     int offset = 0;
-    agregar_opcode(stream, &offset, SIGNAL);
-    send(cpu_dispatch_fd, stream, offset, 0);
+    agregar_opcode(stream, &offset, PEDIDO_RECURSO);
+    send(cpu_interrupt_fd, stream, offset, 0);
     free(stream);
     esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
 }
