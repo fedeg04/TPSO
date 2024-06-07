@@ -93,7 +93,7 @@ void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiem
             void* stream = malloc(sizeof(op_code));
             int offset = 0;
             agregar_opcode(stream, &offset, BLOQUEADO_RECURSO);
-            send(cpu_dispatch_fd, stream, offset, 0);
+            send(cpu_interrupt_fd, stream, offset, 0);
             temporal_stop(timer);
         if (!strcmp(algoritmo_planificacion, "VRR"))
     {
@@ -108,7 +108,7 @@ void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiem
     }
             temporal_destroy(timer);
             liberar_cpu();
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%d>", proceso->pid, recurso_wait);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, recurso_wait);
             pedir_recurso(recurso_wait);
             verificar_detencion_de_planificacion();
             desbloquear_proceso(proceso);

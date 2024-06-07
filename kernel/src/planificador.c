@@ -39,8 +39,10 @@ void mostrar_pids_ready(t_list* ready_list, char* cola) {
     t_list* pids = list_map(ready_list, (void*) _get_pid);
     char* buffer = string_new();
     for(int i=0; i < list_size(ready_list); i++) {
-        string_append(&buffer, string_itoa(list_get(pids, i)));
+        char* pid_a_mostrar = string_itoa(list_get(pids, i));
+        string_append(&buffer, pid_a_mostrar);
         string_append(&buffer, " ");
+        free(pid_a_mostrar);
     }
     log_info(logger_kernel, "Cola Ready <%s>: %s", cola, buffer);
     free(buffer);
@@ -168,7 +170,7 @@ void manejar_interrupcion_de_timer(void *args_void)
     bool _es_el_proceso(proceso_t* proceso_a_encontrar) {
         return es_el_proceso(proceso_a_encontrar, proceso);
     }
-    if (list_find(pcbs_exec, _es_el_proceso) == proceso)
+    if (list_find(pcbs_exec, (void*)_es_el_proceso) == proceso)
     {
         temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);
@@ -285,27 +287,37 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
     switch (instruccion_de_motivo)
     {
     case IO_GEN_SLEEP:
+        proceso_interfaz->interfaz = malloc(string_length(substrings[1]));  
         proceso_interfaz->interfaz = substrings[1];
         proceso_interfaz->uni_de_trabajo = atoi(substrings[2]);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
         enviar_proceso_a_interfaz(proceso_interfaz, "GENERICA", hacer_io_gen_sleep);
+        free(proceso_interfaz->interfaz);
         break;
     case IO_STDIN_READ:
+        proceso_interfaz->interfaz = malloc(string_length(substrings[1]));
         proceso_interfaz->interfaz = substrings[1];
         proceso_interfaz->cant_paginas = atoi(substrings[2]);
+        proceso_interfaz->direcciones_bytes = malloc(string_length(substrings[3]));
         proceso_interfaz->direcciones_bytes = substrings[3];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
         enviar_proceso_a_interfaz(proceso_interfaz, "STDIN", hacer_io_stdin_read);
+        free(proceso_interfaz->interfaz);
+        free(proceso_interfaz->direcciones_bytes);
         break;
     case IO_STDOUT_WRITE:
+        proceso_interfaz->interfaz = malloc(string_length(substrings[1]));
         proceso_interfaz->interfaz = substrings[1];
         proceso_interfaz->cant_paginas = atoi(substrings[2]);
+        proceso_interfaz->direcciones_bytes = malloc(string_length(substrings[3]));
         proceso_interfaz->direcciones_bytes = substrings[3];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
         enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
+        free(proceso_interfaz->interfaz);
+        free(proceso_interfaz->direcciones_bytes);
         break;
     case IO_FS_CREATE:
         char *interfaz_create = substrings[1];
@@ -417,7 +429,6 @@ void realizar_exit() {
 }
 
 void finalizar_proceso_de_pid(uint32_t pid_proceso) {
-    // Habria que poner un semaforo que de mutua exclusion sobre pid_a_finalizar
     pid_a_finalizar = pid_proceso;
     buscar_en_cola_y_finalizar_proceso(pcbs_new, mutex_new_list);
     buscar_en_cola_y_finalizar_proceso(pcbs_ready, mutex_ready_list);
@@ -440,8 +451,9 @@ void buscar_en_cola_y_finalizar_proceso(t_list* cola, pthread_mutex_t mutex)  {
     pthread_mutex_unlock(&mutex);
     if(proceso != NULL) {
     if(cola == pcbs_ready || cola == pcbs_ready_prioritarios) {
-        sem_post(&multiprogramacion);
+        verificar_multiprogramacion();
     }
+    desalojar_recursos(proceso);
     ingresar_a_exit(proceso);
     realizar_exit();
     }
@@ -514,6 +526,12 @@ void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion) {
 
 void entrar_a_exit(proceso_t* proceso) {
     desalojar_recursos(proceso);
+    verificar_multiprogramacion();
+    ingresar_a_exit(proceso);
+    realizar_exit();
+}
+
+void verificar_multiprogramacion() {
     pthread_mutex_lock(&mutex_disminuciones);
     if(disminuciones_multiprogramacion > 0) {
         disminuciones_multiprogramacion--;
@@ -523,8 +541,6 @@ void entrar_a_exit(proceso_t* proceso) {
         pthread_mutex_unlock(&mutex_disminuciones);
         sem_post(&multiprogramacion);
     }
-    ingresar_a_exit(proceso);
-    realizar_exit();
 }
 
 void desalojar_recursos(proceso_t* proceso) {
