@@ -22,8 +22,16 @@ typedef struct
 {
     uint32_t pid;
     uint32_t quantum;
+    uint8_t* recursos;
     registros_t* registros;
 } proceso_t;
+
+typedef struct
+{
+    uint32_t pid;
+    uint32_t quantum;
+    registros_t* registros;
+} pcb_t;
 
 registros_t* inicializar_registros();
 

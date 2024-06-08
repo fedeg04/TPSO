@@ -7,5 +7,6 @@
 
 void procesar_conexion(void* args);
 void conectar_interfaz(char* interfaz, int socket);
-
+void desconectar_interfaz(char* interfaz);
+void guardar_interfaz(char* nombre, char* tipo);
 #endif

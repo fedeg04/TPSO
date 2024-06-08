@@ -7,6 +7,7 @@ void inicializar_listas()
     pcbs_exec = list_create();
     pcbs_exit = queue_create();
     pcbs_ready_prioritarios = list_create();
+    interfaces = list_create();
     pcbs_generica = list_create();
     pcbs_stdin = list_create();
     pcbs_stdout = list_create();
@@ -25,6 +26,7 @@ void liberar_listas()
     list_destroy(pcbs_ready_prioritarios);
     list_destroy(pcbs_exec);
     queue_destroy(pcbs_exit);
+    list_destroy(interfaces);
     list_destroy(pcbs_generica);
     list_destroy(pcbs_stdin);
     list_destroy(pcbs_stdout);
@@ -54,7 +56,7 @@ void get_config(t_config *config)
     {
         instancias_recursos[i] = atoi(instancias_string[i]);
     }
-    free(instancias_string);
+    string_array_destroy(instancias_string);
 }
 
 int cantidadDeRecursos(char **instancias_string)
@@ -77,10 +79,13 @@ void inicializar_semaforos()
     pthread_mutex_init(&mutex_generica_list, NULL);
     pthread_mutex_init(&mutex_stdin_list, NULL);
     pthread_mutex_init(&mutex_stdout_list, NULL);
-    pthread_mutex_init(&mutex_dialfs_list, NULL);
+    pthread_mutex_init(&mutex_reanudar_planificacion, NULL);
     pthread_mutex_init(&mutex_generica_exec, NULL);
     pthread_mutex_init(&mutex_stdin_exec, NULL);
     pthread_mutex_init(&mutex_stdout_exec, NULL);
+    pthread_mutex_init(&mutex_planificacion_activa, NULL);
+    pthread_mutex_init(&mutex_lista_interfaces, NULL);
+    pthread_mutex_init(&mutex_disminuciones, NULL);
     mutex_recursos_list = malloc(cantidad_recursos * sizeof(pthread_mutex_t));
     mutex_recursos_instancias = malloc(cantidad_recursos * sizeof(pthread_mutex_t));
     for (int i = 0; i < cantidad_recursos; i++)
@@ -99,6 +104,7 @@ void inicializar_semaforos()
     sem_init(&vuelta_io_gen_sleep, 0, 0);
     sem_init(&vuelta_io_stdin_read, 0, 0);
     sem_init(&vuelta_io_stdout_write, 0, 0);
+    sem_init(&sem_detener_planificacion, 0, 0);
     pcb_esperando_recurso = malloc(cantidad_recursos * sizeof(sem_t));
     for (int i = 0; i < cantidad_recursos; i++)
     {
@@ -116,10 +122,13 @@ void liberar_semaforos()
     pthread_mutex_destroy(&mutex_generica_list);
     pthread_mutex_destroy(&mutex_stdin_list);
     pthread_mutex_destroy(&mutex_stdout_list);
-    pthread_mutex_destroy(&mutex_dialfs_list);
+    pthread_mutex_destroy(&mutex_reanudar_planificacion);
     pthread_mutex_destroy(&mutex_generica_exec);
     pthread_mutex_destroy(&mutex_stdin_exec);
     pthread_mutex_destroy(&mutex_stdout_exec);
+    pthread_mutex_destroy(&mutex_planificacion_activa);
+    pthread_mutex_destroy(&mutex_lista_interfaces);
+    pthread_mutex_destroy(&mutex_disminuciones);
     for (int i = 0; i < cantidad_recursos; i++)
     {
         pthread_mutex_destroy(&mutex_recursos_list[i]);
@@ -137,6 +146,7 @@ void liberar_semaforos()
     sem_destroy(&vuelta_io_gen_sleep);
     sem_destroy(&vuelta_io_stdin_read);
     sem_destroy(&vuelta_io_stdout_write);
+    sem_destroy(&sem_detener_planificacion);
     for (int i = 0; i < cantidad_recursos; i++)
     {
         sem_destroy(&pcb_esperando_recurso[i]);

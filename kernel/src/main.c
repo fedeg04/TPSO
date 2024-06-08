@@ -5,16 +5,45 @@
 #include <../include/consola.h>
 
 
+void inicializar_valores() {
+    inicializar_listas();
+    inicializar_semaforos();
+    diccionario_interfaces = dictionary_create();
+    pid_siguiente = 1;
+    fin_a_proceso_sleep = 0;
+    disminuciones_multiprogramacion = 0;
+    planificacion_activa = 1;
+    reanudar_planificacion = 0;
+}
+
+void liberar_valores() {
+    liberar_listas();
+    liberar_semaforos();
+    liberar_info_interfaces();
+}
+
+void liberar_info_interfaces() {
+    interfaz_t* interfaz;
+    while( (interfaz = list_get(interfaces, 0)) != NULL) {
+        list_remove(interfaces, (void*) interfaz);
+        list_destroy(interfaz->cola);
+        pthread_mutex_destroy(&interfaz->mutex_cola);
+        pthread_mutex_destroy(&interfaz->mutex_exec);
+        pthread_mutex_destroy(&interfaz->mutex_fin_de_proceso);
+        sem_destroy(&interfaz->sem_eliminar_proceso);
+        sem_destroy(&interfaz->sem_vuelta);
+        free(interfaz->nombre);
+        free(interfaz->tipo);
+        free(interfaz);
+    }
+    list_destroy(interfaces);
+}
 
 int main(int argc, char* argv[]) {
     logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
     t_config* config_kernel = iniciar_config("kernel.config");
     get_config(config_kernel);
-    inicializar_listas();
-    inicializar_semaforos();
-    diccionario_interfaces = dictionary_create();
-    pid_siguiente = 1;
-    procesos_activos = 0;
+    inicializar_valores();
 
     //Se conecta como cliente a la memoria (interrupt)
     memoria_interrupt_fd = generar_conexion(logger_kernel, "memoria", ip_memoria, puerto_memoria, config_kernel);
@@ -35,6 +64,7 @@ int main(int argc, char* argv[]) {
     while(server_escuchar(kernel_fd, logger_kernel, (procesar_conexion_func_t)procesar_conexion, "kernel"));
 
     pthread_join(hilo_consola, NULL);
+    liberar_valores();
     liberar_listas();
     liberar_semaforos();
     terminar_programa(logger_kernel, config_kernel);
