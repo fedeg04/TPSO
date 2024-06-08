@@ -9,7 +9,7 @@
 
 char* puerto_escucha;
 int tam_memoria;
-int tam_pagina;
+uint32_t tam_pagina;
 char* path_instrucciones;
 int retardo_respuesta;
 t_list* archivos_procesos;

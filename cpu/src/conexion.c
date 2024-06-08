@@ -54,21 +54,25 @@ void procesar_conexion_dispatch(void *args_void)
             log_info(logger, "Tiro error");
             return;
         }
-        switch (opcode)
-        {
-        case ENVIAR_PCB:
-            pcb_t *pcb = malloc(sizeof(pcb_t));
-            pcb->registros = malloc(sizeof(registros_t));
-            recibir_pcb(socket_cliente, pcb, logger);
-            log_info(logger, "PCB->PC: %d", pcb->registros->PC);
-            memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
-            while (1)
-            {
-                log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
-                enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
-                char *instruccion = recibir_instruccion(memoria_fd);
-                if (!ejecutar_instruccion(instruccion, logger, pcb, socket_cliente))
+        switch(opcode) {
+            case ENVIAR_PCB:    
+                pcb_t* pcb = malloc(sizeof(pcb_t));  
+                pcb->registros = malloc(sizeof(registros_t));
+                recibir_pcb(socket_cliente, pcb, logger);
+                memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
+                while (1)
                 {
+                    log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
+                    enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
+                    char* instruccion = recibir_instruccion(memoria_fd);
+                    char** parametros = string_split(instruccion, " ");
+                    if(!ejecutar_instruccion(parametros, instruccion, logger, pcb, socket_cliente)) {
+                        free(instruccion);
+                        string_array_destroy(parametros);
+                        break;
+                    }
+                    string_array_destroy(parametros);
+                    registros_cpu->PC++;
                     free(instruccion);
                     
                     if (es_proceso_a_finalizar(pcb->pid))
@@ -76,162 +80,171 @@ void procesar_conexion_dispatch(void *args_void)
                         enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
                     }
                     break;
-                    
-                }
+                    if (es_proceso_a_finalizar(pcb->pid))
+                    {
+                        enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
+                        break;
+                    }
                 
-                if (es_proceso_a_finalizar(pcb->pid))
-                {
-                    enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
-                    break;
-                }
-                
-                registros_cpu->PC++;
-                free(instruccion);
-                if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid))
-                {
-                    enviar_contexto(socket_cliente, pcb, "TIMER");
+                    registros_cpu->PC++;
+                    free(instruccion);
+                    if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid))
+                    {
+                        enviar_contexto(socket_cliente, pcb, "TIMER");
+                        pid_interrumpido = -1;
+                        break;
+                    }
                     pid_interrumpido = -1;
-                    break;
                 }
-                pid_interrumpido = -1;
+                free(pcb->registros);
+                free(pcb);
+                break;
+            default:
+                break;
             }
-            free(pcb->registros);
-            free(pcb);
-            log_info(logger, "AX: %u", registros_cpu->AX);
-            log_info(logger, "BX: %u", registros_cpu->BX);
-            break;
-        default:
-            break;
         }
+        return;
     }
-    return;
-}
-
-int ejecutar_instruccion(char *instruccion, t_log *logger, pcb_t *pcb, int socket)
-{
-
-    char **substrings = string_split(instruccion, " ");
-    char *comando = substrings[0];
+int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, proceso_t* pcb, int socket) {
+    char* comando = parametros[0];
     op_code opcode = string_to_opcode(comando);
-    char *registro_dest;
-    char *registro_orig;
-    uint32_t valor_dest;
-    uint32_t valor_orig;
-    // uint8_t valor_dest;
-    // uint8_t valor_orig;
-
-    switch (opcode)
+    char* primer_parametro;
+    char* segundo_parametro;
+    char* tercer_parametro;
+    uint32_t primer_valor;
+    uint32_t segundo_valor;
+    uint32_t tercer_valor;
+    int length = 0;
+    while (parametros[length] != NULL) {
+        length++;
+    }
+    if(length == 2) {
+        primer_parametro = parametros[1];
+        primer_valor = get_valor_registro(primer_parametro);
+    }
+    if (length == 3)
     {
-    case SET:
-        registro_dest = substrings[1];
-        valor_dest = atoi(substrings[2]);
-        set_registros(registro_dest, valor_dest);
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %u>", pcb->pid, comando, registro_dest, valor_dest);
-        return 1;
-    case MOV_IN:
-        return 1;
-    case MOV_OUT:
-        registro_dest = substrings[1];
-        registro_orig = substrings[2];
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-        // uint16_t pagina = pagina_direccion_logica(registro_dest);
-        // uint16_t desplazamiento = desplazamiento_direccion_logica(registro_dest);
+        primer_parametro = parametros[1];
+        segundo_parametro = parametros[2];
+        primer_valor = get_valor_registro(primer_parametro);
+        segundo_valor = get_valor_registro(segundo_parametro);
+    }
+    if (length == 4)
+    {
+        primer_parametro = parametros[1];
+        segundo_parametro = parametros[2];
+        tercer_parametro = parametros[3];
+        primer_valor = get_valor_registro(primer_parametro);
+        segundo_valor = get_valor_registro(segundo_parametro);
+        tercer_valor = get_valor_registro(tercer_parametro);
+    }
 
+    switch(opcode) {
+        case SET:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            segundo_valor = atoi(segundo_parametro);
+            set_registros(primer_parametro, segundo_valor);
+            return 1;
+        case MOV_IN:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            uint32_t cantidad_bytes_in = cant_bytes(primer_parametro);
+            uint8_t cant_paginas = cantidad_paginas_enviar(cantidad_bytes_in, segundo_valor);
+            uint32_t lectura = enviar_mov_in(cant_paginas, pcb->pid, cantidad_bytes_in, desplazamiento_direccion_logica(segundo_valor), pagina_direccion_logica(segundo_valor), logger);
+            set_registros(primer_parametro, lectura);
+            return 1;
+        case MOV_OUT:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            uint32_t cantidad_bytes = cant_bytes(segundo_parametro);
+            uint8_t cant_paginas_enviar = cantidad_paginas_enviar(cantidad_bytes, primer_valor);
+            return enviar_mov_out(segundo_valor, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(primer_valor), pagina_direccion_logica(primer_valor), logger);
+        case SUM:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            set_registros(primer_parametro, primer_valor + segundo_valor);
+            return 1;
+        case SUB:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            log_info(logger, "1: %d, 2: %d", primer_valor, segundo_valor);
+            set_registros(primer_parametro, primer_valor - segundo_valor);
+            return 1;
+        case JNZ:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            if(primer_valor != 0) {
+                set_registros("PC", segundo_valor);
+            }
         return 1;
-    case SUM:
-        registro_dest = substrings[1];
-        registro_orig = substrings[2];
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-        valor_dest = get_valor_registro(registro_dest);
-        valor_orig = get_valor_registro(registro_orig);
-        set_registros(registro_dest, valor_dest + valor_orig);
-        return 1;
-    case SUB:
-        registro_dest = substrings[1];
-        registro_orig = substrings[2];
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_dest, registro_orig);
-        valor_dest = get_valor_registro(registro_dest);
-        valor_orig = get_valor_registro(registro_orig);
-        log_info(logger, "1: %d, 2: %d", valor_dest, valor_orig);
-        set_registros(registro_dest, valor_dest - valor_orig);
-        return 1;
-    case JNZ:
-        registro_orig = substrings[1];
-        valor_dest = atoi(substrings[2]);
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %d>", pcb->pid, comando, registro_orig, valor_dest);
-        valor_orig = get_valor_registro(registro_orig);
-        if (valor_orig != 0)
-        {
-            set_registros("PC", valor_dest);
-        }
-        return 1;
-    case RESIZE:
-        valor_dest = atoi(substrings[1]);
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%d>", pcb->pid, comando, valor_dest);
-        enviar_resize(valor_dest, pcb->pid);
-        op_code resize_response;
-        recv(memoria_fd, &resize_response, sizeof(op_code), 0);
-        if (resize_response == OUTOFMEMORY)
-        {
+        case RESIZE:
+            primer_valor = atoi(primer_parametro);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
+            enviar_resize(primer_valor, pcb->pid);
+            return respuesta_memoria(pcb, socket);
+        case COPY_STRING:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
+            uint8_t cant_pags_leer = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("SI"));
+            char* leido = malloc(1);
+            leido[0] = '\0';
+            leer_string(leido, cant_pags_leer, desplazamiento_direccion_logica(get_valor_registro("SI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("SI")), logger);
+            leido[atoi(primer_parametro)] = '\0';
+            log_info(logger, "Que carajo se lee: %s", leido);
+            uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
+            return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
+        case WAIT:
+          enviar_contexto(socket, pcb, instruccion);
+          sem_wait(&fin_pedido_recursos);
+          if (flag_sigue_en_exec == 1)
+          {
+              return 1;
+          } else {
+              registros_cpu->PC++;
+              return 0;
+          }
+        case SIGNAL:
+          enviar_contexto(socket, pcb, instruccion);
+          sem_wait(&fin_pedido_recursos);
+          if (flag_sigue_en_exec == 1)
+          {
+              return 1;
+          }
+          else
+          {
+              registros_cpu->PC++;
+              return 0;
+          }
+        case IO_GEN_SLEEP:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            registros_cpu->PC++;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
+        case IO_STDIN_READ:
+            return 1;
+        case IO_STDOUT_WRITE:
+            return 1;
+        case IO_FS_CREATE:
+            return 1;
+        case IO_STDIN_READ:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            uint8_t cant_paginas_read = cantidad_paginas_enviar(tercer_valor, segundo_valor);
+            envio_kernel_io(IO_STDIN_READ, primer_parametro, cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
+            return 0;
+        case IO_STDOUT_WRITE:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            uint8_t cant_paginas_write = cantidad_paginas_enviar(tercer_valor, segundo_valor);
+            envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
+            return 0;
+        case IO_FS_CREATE:
+          return 1;
+        case IO_FS_DELETE:
+            return 1;
+        case IO_FS_TRUNCATE:
+            return 1;
+        case IO_FS_WRITE:
+            return 1;
+        case IO_FS_READ:
+            return 1;
+        case EXIT:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
             enviar_contexto(socket, pcb, instruccion);
             return 0;
         }
-        return 1;
-    case COPY_STRING:
-        return 1;
-    case WAIT:
-        enviar_contexto(socket, pcb, instruccion);
-        sem_wait(&fin_pedido_recursos);
-        if (flag_sigue_en_exec == 1)
-        {
-            return 1;
-        }
-        else
-        {
-            registros_cpu->PC++;
-            return 0;
-        }
-
-    case SIGNAL:
-        enviar_contexto(socket, pcb, instruccion);
-        sem_wait(&fin_pedido_recursos);
-        if (flag_sigue_en_exec == 1)
-        {
-            return 1;
-        }
-        else
-        {
-            registros_cpu->PC++;
-            return 0;
-        }
-
-    case IO_GEN_SLEEP:
-        registro_orig = substrings[1];
-        registro_dest = substrings[2];
-        log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, registro_orig, registro_dest);
-        registros_cpu->PC++;
-        enviar_contexto(socket, pcb, instruccion);
-        return 0;
-    case IO_STDIN_READ:
-        return 1;
-    case IO_STDOUT_WRITE:
-        return 1;
-    case IO_FS_CREATE:
-        return 1;
-    case IO_FS_DELETE:
-        return 1;
-    case IO_FS_TRUNCATE:
-        return 1;
-    case IO_FS_WRITE:
-        return 1;
-    case IO_FS_READ:
-        return 1;
-    case EXIT:
-        log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
-        enviar_contexto(socket, pcb, instruccion);
-        return 0;
-    }
-    string_split_free(&substrings);
 }
 
 bool hay_interrupcion(uint32_t pid)
@@ -255,8 +268,19 @@ void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket)
     free(stream);
 }
 
-void recibir_pcb(int socket, pcb_t *pcb, t_log *logger)
-{
+
+int pedir_tamanio_pagina(int socket_memoria) {
+    void* stream = malloc(sizeof(op_code));
+    int offset = 0;
+    agregar_opcode(stream, &offset, TAMANIOPAGINA);
+    send(socket_memoria, stream, offset, 0);
+    free(stream);
+    uint32_t tam;
+    recv(socket_memoria, &tam, sizeof(uint32_t),0);
+    return tam;
+}
+
+void recibir_pcb(int socket, pcb_t *pcb, t_log *logger) {
     uint32_t pid;
     uint32_t quantum;
     uint32_t PC;
@@ -314,8 +338,8 @@ uint32_t recibir_interrupcion(int socket)
     return pid_interrumpido_recv;
 }
 
-void enviar_contexto(int socket, pcb_t *pcb, char *instruccion)
-{
+
+void enviar_contexto(int socket, pcb_t *pcb, char *instruccion) {
     memcpy(pcb->registros, registros_cpu, sizeof(registros_t));
     uint32_t tamanio = string_length(instruccion) + 1;
     void *stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
@@ -338,50 +362,28 @@ void enviar_contexto(int socket, pcb_t *pcb, char *instruccion)
     free(stream);
 }
 
-void set_registros(char *registro_dest, uint32_t valor)
-{
-    if (strcmp(registro_dest, "AX") == 0)
-    {
+void set_registros(char* primer_parametro, uint32_t valor) {
+    if (strcmp(primer_parametro, "AX") == 0) {
         registros_cpu->AX = valor;
-    }
-    else if (strcmp(registro_dest, "BX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "BX") == 0) {
         registros_cpu->BX = valor;
-    }
-    else if (strcmp(registro_dest, "CX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "CX") == 0) {
         registros_cpu->CX = valor;
-    }
-    else if (strcmp(registro_dest, "DX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "DX") == 0) {
         registros_cpu->DX = valor;
-    }
-    else if (strcmp(registro_dest, "EAX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "EAX") == 0) {
         registros_cpu->EAX = valor;
-    }
-    else if (strcmp(registro_dest, "EBX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "EBX") == 0) {
         registros_cpu->EBX = valor;
-    }
-    else if (strcmp(registro_dest, "ECX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "ECX") == 0) {
         registros_cpu->ECX = valor;
-    }
-    else if (strcmp(registro_dest, "EDX") == 0)
-    {
+    } else if (strcmp(primer_parametro, "EDX") == 0) {
         registros_cpu->EDX = valor;
-    }
-    else if (strcmp(registro_dest, "PC") == 0)
-    {
-        registros_cpu->PC = valor - 1;
-    }
-    else if (strcmp(registro_dest, "SI") == 0)
-    {
+    } else if (strcmp(primer_parametro, "PC") == 0) {
+        registros_cpu->PC = valor-1;
+    } else if (strcmp(primer_parametro, "SI") == 0) {
         registros_cpu->SI = valor;
-    }
-    else if (strcmp(registro_dest, "DI") == 0)
-    {
+    } else if (strcmp(primer_parametro, "DI") == 0) {
         registros_cpu->DI = valor;
     }
 }
@@ -445,4 +447,244 @@ void enviar_resize(uint32_t tamanio, uint32_t pid)
     agregar_uint32_t(stream, &offset, pid);
     send(memoria_fd, stream, offset, 0);
     free(stream);
+}
+
+uint16_t pedir_marco(uint32_t pid, uint32_t nro_pagina, t_log* logger) {
+    int marco = buscar_marco_tlb(nro_pagina, pid);
+    if(marco != -1) {
+        log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d>", pid, nro_pagina);
+        log_info(logger, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", pid, nro_pagina, marco);
+        return (uint16_t)marco;
+    } else {
+        uint16_t u_marco;
+        log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d>", pid, nro_pagina);
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t)*2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, PEDIR_MARCO);
+        agregar_uint32_t(stream, &offset, pid);
+        agregar_uint32_t(stream, &offset, nro_pagina);
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+        recv(memoria_fd, &u_marco, sizeof(uint16_t), 0);
+        agregar_a_tlb(nro_pagina, u_marco, pid);
+        log_info(logger, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", pid, nro_pagina, u_marco);
+        return u_marco;
+    }
+}
+
+bool enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento, uint32_t nro_pagina, t_log* logger) {
+    uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
+    void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
+    for (int i = 0; i < cant_pags_a_enviar; i++)
+    {
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t)*2);
+        int offset = 0;
+        uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        agregar_opcode(stream, &offset, ESCRIBIR);
+        agregar_uint32_t(stream, &offset, pid);
+        agregar_uint16_t(stream, &offset, direccion_fisica);
+        if(cant_pags_a_enviar == 1) {
+            agregar_uint16_t(stream, &offset, cant_bytes);
+            stream = realloc(stream, offset + cant_bytes);
+            void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
+            uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
+            for (int i = 0; i < cant_bytes; i++)
+            {
+                uint8_t envio = *(valor_uint_ptr - i);
+                agregar_uint8_t(stream, &offset, envio);
+            }
+            send(memoria_fd, stream, offset, 0);
+        } else {
+            agregar_uint16_t(stream, &offset, bytes_restantes);
+            stream = realloc(stream, offset + bytes_restantes);
+            desplazamiento = 0;
+            uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
+            for (int j = 0; j < bytes_restantes; j++)
+            {
+                uint8_t envio = *(valor_uint_ptr - j);
+                agregar_uint8_t(stream, &offset, envio);
+            }
+            valor_ptr = valor_ptr - bytes_restantes;
+            bytes_restantes = cant_bytes - bytes_restantes;
+            send(memoria_fd, stream, offset, 0);
+        }
+        free(stream);
+        op_code resp;
+        recv(memoria_fd, &resp, sizeof(op_code), 0);
+        if(resp != MSG) return 0;
+    }
+    return 1; 
+}
+
+uint32_t cant_bytes(char* registro) {
+    if (strcmp(registro, "AX") == 0 || strcmp(registro, "BX") == 0 || strcmp(registro, "CX") == 0 || strcmp(registro, "DX") == 0) {
+        return 1;
+    } else if (strcmp(registro, "EAX") == 0 || strcmp(registro, "EBX") == 0 || strcmp(registro, "ECX") == 0 || strcmp(registro, "EDX") == 0) {
+        return 4;
+    } 
+}
+
+bool respuesta_memoria(proceso_t* pcb, int socket_cliente) {
+    op_code mov_out_response;
+    recv(memoria_fd, &mov_out_response, sizeof(op_code), 0);
+    if(mov_out_response != MSG) {
+        enviar_contexto(socket_cliente, pcb, OUTOFMEMORY);
+        return 0;
+    }   
+    return 1;
+}
+
+uint32_t enviar_mov_in(uint8_t cant_pags, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento, uint32_t nro_pagina, t_log* logger) {
+    char* lectura = malloc(1);
+    lectura[0] = '\0';
+    uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
+    for (int i = 0; i < cant_pags; i++)
+    {
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t)*2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, LEER);
+        agregar_uint32_t(stream, &offset, pid);
+        uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        if(cant_pags == 1) {
+            bytes_restantes = cant_bytes;
+        }
+        agregar_uint16_t(stream, &offset, direccion_fisica);
+        agregar_uint16_t(stream, &offset, bytes_restantes);
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+        
+        bytes_restantes = cant_bytes - bytes_restantes;
+        desplazamiento = 0;
+    }
+    for (int i = 0; i < cant_pags; i++)
+    {
+        uint16_t cant_bytes_leer;
+        recv(memoria_fd, &cant_bytes_leer, sizeof(uint16_t), 0);
+        uint8_t numero_leido;
+        for (int i = 0; i < cant_bytes_leer; i++)
+        {
+            recv(memoria_fd, &numero_leido, 1, 0);
+            char* lectura_parcial = malloc(3);
+            sprintf(lectura_parcial, "%02X", numero_leido);
+            string_append(&lectura, lectura_parcial);
+            free(lectura_parcial);
+        }
+    }
+    unsigned long valor_hex = strtoul(lectura, NULL, 16);
+    free(lectura);
+    return (uint32_t)valor_hex;
+}
+
+char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, uint16_t desplazamiento, uint32_t nro_pagina, uint32_t pid, t_log* logger) {
+    char* direcciones_tamanios = malloc(cant_digitos(cant_pags) + 2);
+    sprintf(direcciones_tamanios, "%u", cant_pags);
+    string_append(&direcciones_tamanios, " ");
+    while (tamanio)
+    {
+        uint16_t marco = pedir_marco(pid, nro_pagina, logger);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        uint32_t tamanio_df;
+        if(cant_pags > 1) {
+            tamanio_df = tamanio_pagina - desplazamiento;
+            desplazamiento = 0;
+        } else {
+            tamanio_df = tamanio;
+        }
+        tamanio -= tamanio_df;
+        cant_pags--;
+        char* df_string = malloc(cant_digitos(direccion_fisica) + 1);
+        sprintf(df_string, "%u", direccion_fisica);
+        char* tamanio_df_string = malloc(cant_digitos(tamanio_df) + 1);
+        sprintf(tamanio_df_string, "%u", tamanio_df);
+        string_append(&direcciones_tamanios, df_string);
+        string_append(&direcciones_tamanios, "-");
+        string_append(&direcciones_tamanios, tamanio_df_string);
+        string_append(&direcciones_tamanios, "-");
+        free(df_string);
+        free(tamanio_df_string);
+    }
+    return direcciones_tamanios;
+}
+
+void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket, uint32_t nro_pagina, t_log* logger) {
+    char* io_stdin_a_kernel = malloc(strlen(interfaz) + 1);
+    strcpy(io_stdin_a_kernel, interfaz);
+    char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas_read, tamanio, desplazamiento, nro_pagina, pcb->pid, logger);
+    string_append(&io_stdin_a_kernel, " ");
+    string_append(&io_stdin_a_kernel, envio_direcciones_tamanios);
+    enviar_contexto(socket, pcb, io_stdin_a_kernel);
+    free(io_stdin_a_kernel);
+    free(envio_direcciones_tamanios);
+}
+
+void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {
+    uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
+    uint16_t bytes_utilizados = 0;
+    for (int i = 0; i < cant_pags; i++)
+    {
+        if(bytes_restantes > tamanio_pagina) {
+            bytes_restantes = tamanio_pagina;
+        }
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t)*2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, LEER);
+        agregar_uint32_t(stream, &offset, pid);
+        uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        if(cant_pags == 1) {
+            bytes_restantes = cant_bytes;
+        }
+        agregar_uint16_t(stream, &offset, direccion_fisica);
+        agregar_uint16_t(stream, &offset, bytes_restantes);
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+        bytes_utilizados += bytes_restantes;
+        bytes_restantes = cant_bytes - bytes_utilizados;
+        desplazamiento = 0;
+    }
+    for (int i = 0; i < cant_pags; i++)
+    {
+        uint16_t cant_bytes_leer;
+        recv(memoria_fd, &cant_bytes_leer, sizeof(uint16_t), 0);
+        char* lectura_parcial = malloc(cant_bytes_leer + 1);
+        recv(memoria_fd, lectura_parcial, cant_bytes_leer, 0);
+        lectura_parcial[cant_bytes_leer] = '\0';
+        string_append(&lectura, lectura_parcial);
+        free(lectura_parcial);
+    }
+}
+
+bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {
+    uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
+    uint8_t bytes_utilizados = 0;
+    for (int i = 0; i < cant_pags; i++)
+    {
+        uint16_t marco = pedir_marco(pid, nro_pagina, logger);
+        uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
+        void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) * 2);
+        int offset = 0;
+        agregar_opcode(stream, &offset, ESCRIBIR);
+        agregar_uint32_t(stream, &offset, pid);
+        agregar_uint16_t(stream, &offset, direccion_fisica);
+        if(bytes_restantes > tamanio_pagina) {
+            bytes_restantes = tamanio_pagina;
+        }
+        if (cant_pags == 1)
+        {
+            bytes_restantes = cant_bytes;
+        }
+        stream = realloc(stream, offset + bytes_restantes);
+        agregar_string_sin_barra0(stream, &offset, mensaje);
+        bytes_utilizados += bytes_restantes;
+        bytes_restantes = cant_bytes - bytes_utilizados;
+        desplazamiento = 0;
+        send(memoria_fd, stream, offset, 0);
+        free(stream);
+        op_code resp;
+        recv(memoria_fd, &resp, sizeof(op_code), 0);
+        if(resp != MSG) return 0;
+    }
+    return 1;
 }

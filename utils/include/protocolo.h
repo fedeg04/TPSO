@@ -39,6 +39,10 @@ typedef enum {
     OUTOFMEMORY,
     BLOQUEADO_RECURSO,
     PEDIDO_RECURSO,
+    TAMANIOPAGINA,
+    PEDIR_MARCO,
+    LEER, 
+    ESCRIBIR,
     MSG
 } op_code;
 
