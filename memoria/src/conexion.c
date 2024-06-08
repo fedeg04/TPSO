@@ -18,7 +18,7 @@ void procesar_conexion(void* args_void) {
                 void* stream = malloc(sizeof(uint32_t));
                 int offset = 0;
                 agregar_uint32_t(stream, &offset, tam_pagina);
-                send(socket_cliente, stream, sizeof(int), 0);
+                send(socket_cliente, stream, offset, 0);
                 free(stream);
                 break;
             case INICIAR_PROCESO:

@@ -125,8 +125,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             uint32_t cantidad_bytes = cant_bytes(segundo_parametro);
             uint8_t cant_paginas_enviar = cantidad_paginas_enviar(cantidad_bytes, primer_valor);
-            enviar_mov_out(segundo_valor, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(primer_valor), pagina_direccion_logica(primer_valor), logger);
-            return respuesta_memoria_escribir(pcb, socket, cant_paginas_enviar);
+            return enviar_mov_out(segundo_valor, cant_paginas_enviar, pcb->pid, cantidad_bytes, desplazamiento_direccion_logica(primer_valor), pagina_direccion_logica(primer_valor), logger);
         case SUM:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             set_registros(primer_parametro, primer_valor + segundo_valor);
@@ -156,8 +155,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             leido[atoi(primer_parametro)] = '\0';
             log_info(logger, "Que carajo se lee: %s", leido);
             uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
-            escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
-            return respuesta_memoria_escribir(pcb, socket, cant_pags_escribir);
+            return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
         case WAIT:
             enviar_contexto(socket, pcb, instruccion);
             return 0;
@@ -216,8 +214,8 @@ int pedir_tamanio_pagina(int socket_memoria) {
     agregar_opcode(stream, &offset, TAMANIOPAGINA);
     send(socket_memoria, stream, offset, 0);
     free(stream);
-    int tam;
-    recv(socket_memoria, &tam, sizeof(int),0);
+    uint32_t tam;
+    recv(socket_memoria, &tam, sizeof(uint32_t),0);
     return tam;
 }
 
@@ -386,7 +384,7 @@ uint16_t pedir_marco(uint32_t pid, uint32_t nro_pagina, t_log* logger) {
     }
 }
 
-void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento, uint32_t nro_pagina, t_log* logger) {
+bool enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, uint32_t cant_bytes, uint16_t desplazamiento, uint32_t nro_pagina, t_log* logger) {
     uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
     void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
     for (int i = 0; i < cant_pags_a_enviar; i++)
@@ -424,7 +422,11 @@ void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, ui
             send(memoria_fd, stream, offset, 0);
         }
         free(stream);
-    }    
+        op_code resp;
+        recv(memoria_fd, &resp, sizeof(op_code), 0);
+        if(resp != MSG) return 0;
+    }
+    return 1; 
 }
 
 uint32_t cant_bytes(char* registro) {
@@ -442,19 +444,6 @@ bool respuesta_memoria(proceso_t* pcb, int socket_cliente) {
         enviar_contexto(socket_cliente, pcb, OUTOFMEMORY);
         return 0;
     }   
-    return 1;
-}
-
-bool respuesta_memoria_escribir(proceso_t* pcb, int socket_cliente, uint8_t cant_pags) {
-    op_code mov_out_response;
-    for (int i = 0; i < cant_pags; i++)
-    {
-        recv(memoria_fd, &mov_out_response, sizeof(op_code), 0);
-        if(mov_out_response != MSG) {
-            enviar_contexto(socket_cliente, pcb, "OUTOFMEMORY");
-            return 0;
-        }   
-    }
     return 1;
 }
 
@@ -554,7 +543,7 @@ void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint
         int offset = 0;
         agregar_opcode(stream, &offset, LEER);
         agregar_uint32_t(stream, &offset, pid);
-        uint16_t marco = pedir_marco(pid, nro_pagina, logger);
+        uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
         uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
         if(cant_pags == 1) {
             bytes_restantes = cant_bytes;
@@ -579,7 +568,7 @@ void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint
     }
 }
 
-void escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {
+bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {
     uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
     uint8_t bytes_utilizados = 0;
     for (int i = 0; i < cant_pags; i++)
@@ -605,5 +594,9 @@ void escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, 
         desplazamiento = 0;
         send(memoria_fd, stream, offset, 0);
         free(stream);
+        op_code resp;
+        recv(memoria_fd, &resp, sizeof(op_code), 0);
+        if(resp != MSG) return 0;
     }
+    return 1;
 }

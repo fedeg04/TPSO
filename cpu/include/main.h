@@ -7,7 +7,7 @@
 #include <../include/conexion.h>
 #include <../include/serializacion.h>
 #include <../include/tlb.h>
-
+#include <../include/seniales.h>
 
 int cpu_dispatch_fd;
 int cpu_interrupt_fd;

@@ -5,8 +5,7 @@
 #include <commons/collections/list.h>
 #include <commons/collections/queue.h>
 #include <stddef.h>
-/*#include <string.h>
-#include <stdlib.h>*/
+#include <stdlib.h>
 
 typedef struct
 {
@@ -33,5 +32,7 @@ void inicializar_tlb();
 void agregar_segun_algoritmo(uint32_t nro_pagina, uint16_t marco, uint32_t pid);
 void reemplazar_segun_algoritmo(uint32_t nro_pagina, uint16_t marco, uint32_t pid);
 static void* fila_menor_llegada(fila_tlb_t* a, fila_tlb_t* b);
+static void fila_destroy(fila_tlb_t* fila);
+void eliminar_tlb();
 
 #endif
