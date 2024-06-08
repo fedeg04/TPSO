@@ -8,7 +8,5 @@ void controlar_seniales(t_log* logger) {
 }
 
 void cerrar_seniales() {
-    log_info(logger_sen, "Llegue aca");
-    list_destroy_and_destroy_elements(archivos_procesos, (void*) archivo_proceso_destroy);
     exit(0);
 }

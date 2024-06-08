@@ -16,10 +16,6 @@ void agregar_proceso(t_list* archivos_procesos, char* path, uint32_t pid) {
 }
 
 
-bool buscar_por_pid(archivo_proceso_t *archivo_proceso) {
-    return (archivo_proceso->pid == pid_a_buscar);
-}
-
 char* buscar_instruccion(uint32_t pid, uint32_t pc, t_list* archivos_procesos) {
     archivo_proceso_t* archivo_proceso_encontrado = archivo_proceso_por_pid(pid, archivos_procesos);
     
@@ -32,14 +28,18 @@ char* buscar_instruccion(uint32_t pid, uint32_t pc, t_list* archivos_procesos) {
 }
 
 archivo_proceso_t* archivo_proceso_por_pid(uint32_t pid, t_list* archivos_procesos){
-    pid_a_buscar = pid;
+    
+    bool buscar_por_pid(archivo_proceso_t *archivo_proceso) {
+        return (archivo_proceso->pid == pid);
+    }
+
     return list_find(archivos_procesos, (void*)buscar_por_pid);
 } 
 
 char* buscar_instruccion_en(FILE* f, uint32_t pc) {
-    char* linea;
+    char* linea = NULL;
     size_t longitud = 0;
-    ssize_t leidos;
+    ssize_t leidos = 0;
     for (int i = 0; i <= pc; i++) {
         leidos = getline(&linea, &longitud, f);
         if (leidos == -1) { // Se alcanzó el final del archivo antes de llegar a la línea 'pc'
@@ -52,7 +52,7 @@ char* buscar_instruccion_en(FILE* f, uint32_t pc) {
 }
 
 void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso) {
-    free(archivo_proceso->path);
+    //free(archivo_proceso->path);
     free(archivo_proceso);
 }
 

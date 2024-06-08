@@ -3,7 +3,7 @@
 void get_config(t_config* config) {
     puerto_escucha = config_get_string_value(config, "PUERTO_ESCUCHA");
     tam_memoria = config_get_int_value(config, "TAM_MEMORIA");
-    tam_pagina = config_get_int_value(config, "TAM_PAGINA");
+    tam_pagina = (uint32_t)config_get_int_value(config, "TAM_PAGINA");
     path_instrucciones = config_get_string_value(config, "PATH_INSTRUCCIONES");
     retardo_respuesta = config_get_int_value(config, "RETARDO_RESPUESTA");
 
@@ -17,13 +17,14 @@ int main(int argc, char* argv[]) {
 
     archivos_procesos = list_create();
     //PAGINAS
+    memoria = malloc(tam_memoria);
     tablas_paginas_memoria = list_create();
     int cant_marcos = cantidad_marcos();
     char* bitarray = malloc((cant_marcos+7)/8);
     memset(bitarray, 0, sizeof(bitarray));
     bitarray_tabla = bitarray_create(bitarray,(cant_marcos+7)/8);
 
-    controlar_seniales(logger_memoria);
+    //controlar_seniales(logger_memoria);
 
     //Empieza el servidor
     int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha, "memoria");

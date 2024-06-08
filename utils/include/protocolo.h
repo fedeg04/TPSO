@@ -40,6 +40,10 @@ typedef enum {
     DIALFS_BYE,
     TIMER,
     OUTOFMEMORY,
+    TAMANIOPAGINA,
+    PEDIR_MARCO,
+    LEER, 
+    ESCRIBIR,
     MSG
 } op_code;
 
