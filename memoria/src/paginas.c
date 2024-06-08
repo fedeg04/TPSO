@@ -107,9 +107,9 @@ int completar_ultima_pagina(tabla_t *tabla, int tamanio)
 pagina_t *buscar_pagina_por_nro(tabla_t *tabla, int nro_pagina)
 {
     bool pagina_por_nro(pagina_t *pagina)
-{
-    return (pagina->nro_pagina == nro_pagina);
-}
+    {
+        return (pagina->nro_pagina == nro_pagina);
+    }
     return list_find(tabla->paginas, (void *)pagina_por_nro);
 }
 

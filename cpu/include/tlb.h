@@ -26,9 +26,9 @@ extern int cantidad_entradas_tlb;
 extern t_queue* cola_fifo_tlb;
 extern char* algoritmo_tlb;
 
-agregar_a_tlb(uint32_t nro_pagina, uint16_t marco, uint32_t pid);
+void agregar_a_tlb(uint32_t nro_pagina, uint16_t marco, uint32_t pid);
 bool tlb_llena();
-uint16_t buscar_marco_tlb(uint32_t nro_pagina, uint32_t pid);
+int buscar_marco_tlb(uint32_t nro_pagina, uint32_t pid);
 void inicializar_tlb();
 void agregar_segun_algoritmo(uint32_t nro_pagina, uint16_t marco, uint32_t pid);
 void reemplazar_segun_algoritmo(uint32_t nro_pagina, uint16_t marco, uint32_t pid);

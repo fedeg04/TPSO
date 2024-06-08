@@ -1,6 +1,6 @@
 #include <../include/tlb.h>
 
-agregar_a_tlb(uint32_t nro_pagina, uint16_t marco, uint32_t pid) { //warning en agregar_a_tlb ???
+void agregar_a_tlb(uint32_t nro_pagina, uint16_t marco, uint32_t pid) { //warning en agregar_a_tlb ???
     if(tlb_llena()) {
         reemplazar_segun_algoritmo(nro_pagina, marco, pid);
     } else {
@@ -12,12 +12,12 @@ bool tlb_llena() {
     return list_size(tlb->filas) == cantidad_entradas_tlb;
 }
 
-uint16_t buscar_marco_tlb(uint32_t nro_pagina, uint32_t pid) {
+int buscar_marco_tlb(uint32_t nro_pagina, uint32_t pid) {
 
     bool buscar_marco_por_pid_pagina(fila_tlb_t* fila) {
         return fila->nro_pagina == nro_pagina && fila->pid == pid;
     }
-    fila_tlb_t* fila = (tlb->filas, (void*)buscar_marco_por_pid_pagina); //tlb->filas no autocompleta
+    fila_tlb_t* fila = list_find(tlb->filas, (void*)buscar_marco_por_pid_pagina); //tlb->filas no autocompleta
     if(strcmp(algoritmo_tlb, "LRU") == 0 && fila != NULL) { //cambia el valor de marco a 21845
         fila->llegada = tlb->proxima_llegada++;
     }

@@ -364,12 +364,13 @@ void enviar_resize(uint32_t tamanio, uint32_t pid) {
 }
 
 uint16_t pedir_marco(uint32_t pid, uint32_t nro_pagina, t_log* logger) {
-    uint16_t marco = buscar_marco_tlb(nro_pagina, pid);
+    int marco = buscar_marco_tlb(nro_pagina, pid);
     if(marco != -1) {
         log_info(logger, "PID: <%d> - TLB HIT - Pagina: <%d>", pid, nro_pagina);
         log_info(logger, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", pid, nro_pagina, marco);
-        return marco;
+        return (uint16_t)marco;
     } else {
+        uint16_t u_marco;
         log_info(logger, "PID: <%d> - TLB MISS - Pagina: <%d>", pid, nro_pagina);
         void* stream = malloc(sizeof(op_code) + sizeof(uint32_t)*2);
         int offset = 0;
@@ -378,10 +379,10 @@ uint16_t pedir_marco(uint32_t pid, uint32_t nro_pagina, t_log* logger) {
         agregar_uint32_t(stream, &offset, nro_pagina);
         send(memoria_fd, stream, offset, 0);
         free(stream);
-        recv(memoria_fd, &marco, sizeof(uint16_t), 0);
-        agregar_a_tlb(nro_pagina, marco, pid);
-        log_info(logger, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", pid, nro_pagina, marco);
-        return marco;
+        recv(memoria_fd, &u_marco, sizeof(uint16_t), 0);
+        agregar_a_tlb(nro_pagina, u_marco, pid);
+        log_info(logger, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", pid, nro_pagina, u_marco);
+        return u_marco;
     }
 }
 
@@ -398,8 +399,8 @@ void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, ui
         agregar_uint32_t(stream, &offset, pid);
         agregar_uint16_t(stream, &offset, direccion_fisica);
         if(cant_pags_a_enviar == 1) {
-            stream = realloc(stream, offset + cant_bytes);
             agregar_uint16_t(stream, &offset, cant_bytes);
+            stream = realloc(stream, offset + cant_bytes);
             void* valor_ptr = ((char*)&valor) + cant_bytes - 1;
             uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
             for (int i = 0; i < cant_bytes; i++)
@@ -409,9 +410,9 @@ void enviar_mov_out(uint32_t valor, uint8_t cant_pags_a_enviar, uint32_t pid, ui
             }
             send(memoria_fd, stream, offset, 0);
         } else {
+            agregar_uint16_t(stream, &offset, bytes_restantes);
             stream = realloc(stream, offset + bytes_restantes);
             desplazamiento = 0;
-            agregar_uint16_t(stream, &offset, bytes_restantes);
             uint8_t* valor_uint_ptr = (uint8_t*)valor_ptr; 
             for (int j = 0; j < bytes_restantes; j++)
             {
@@ -450,7 +451,7 @@ bool respuesta_memoria_escribir(proceso_t* pcb, int socket_cliente, uint8_t cant
     {
         recv(memoria_fd, &mov_out_response, sizeof(op_code), 0);
         if(mov_out_response != MSG) {
-            enviar_contexto(socket_cliente, pcb, OUTOFMEMORY);
+            enviar_contexto(socket_cliente, pcb, "OUTOFMEMORY");
             return 0;
         }   
     }

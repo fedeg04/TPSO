@@ -114,7 +114,7 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &pid_marco, sizeof(uint32_t), 0);
                 recv(socket_cliente, &nro_pagina, sizeof(uint32_t), 0);
                 tabla_t* tabla = tabla_paginas_por_pid(pid_marco);
-                pagina_t* pagina = buscar_pagina_por_nro(tabla, nro_pagina);
+                pagina_t* pagina = buscar_pagina_por_nro(tabla, (int)nro_pagina);
                 log_info(logger, "PID: <%d> - Pagina: <%d> - Marco: <%d>", pid_marco, nro_pagina, pagina->marco);
                 void* stream_marco = malloc(sizeof(uint16_t));
                 int offset_marco = 0;
@@ -148,7 +148,7 @@ void enviar_instruccion(int socket, char* instruccion) {
 }
 
 void enviar_out_of_memory(int socket_cliente) {
-    void* stream = malloc(sizeof(uint32_t));
+    void* stream = malloc(sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, OUTOFMEMORY);
     send(socket_cliente, stream, offset, 0);
@@ -157,7 +157,7 @@ void enviar_out_of_memory(int socket_cliente) {
 
 
 void enviar_ok(int socket_cliente) {
-    void* stream = malloc(sizeof(uint32_t));
+    void* stream = malloc(sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, MSG);
     send(socket_cliente, stream, offset, 0);
