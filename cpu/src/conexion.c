@@ -1,45 +1,62 @@
 #include <../include/conexion.h>
 
 uint32_t pid_interrumpido;
+uint32_t pid_a_finalizar;
 
-void procesar_conexion_interrupt(void* args_void) {
-    conexion_args_t* args = (conexion_args_t*) args_void;
+void procesar_conexion_interrupt(void *args_void)
+{
+    conexion_args_t *args = (conexion_args_t *)args_void;
     int socket_cliente = args->socket_cliente;
-    t_log* logger = args->logger;
+    t_log *logger = args->logger;
     free(args);
 
     op_code opcode;
-    while (socket_cliente != 1) {
-        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
+    while (socket_cliente != 1)
+    {
+        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code))
+        {
             log_info(logger, "Tiro error");
             return;
         }
-
-        switch(opcode) {
-            case INTERRUMPIR:
-                pid_interrumpido = recibir_interrupcion(socket_cliente);
-            default:
-               
+        switch (opcode)
+        {
+        case INTERRUMPIR:
+            pid_interrumpido = recibir_interrupcion(socket_cliente);
+            break;
+        case FINALIZAR_PROCESO:
+            pid_a_finalizar = recibir_interrupcion(socket_cliente);
+            break;
+        case PEDIDO_RECURSO:
+            flag_sigue_en_exec = 1;
+            sem_post(&fin_pedido_recursos);
+            break;  
+        case BLOQUEADO_RECURSO:
+            flag_sigue_en_exec = 0;
+            sem_post(&fin_pedido_recursos);
+            break;
+        default:
         }
     }
     return;
 }
 
-void procesar_conexion_dispatch(void* args_void) {
-    conexion_args_t* args = (conexion_args_t*) args_void;
+void procesar_conexion_dispatch(void *args_void)
+{
+    conexion_args_t *args = (conexion_args_t *)args_void;
     int socket_cliente = args->socket_cliente;
-    t_log* logger = args->logger;
+    t_log *logger = args->logger;
     free(args);
     op_code opcode;
-    while (socket_cliente != 1) {
-        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
+    while (socket_cliente != 1)
+    {
+        if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code))
+        {
             log_info(logger, "Tiro error");
             return;
         }
-        
         switch(opcode) {
             case ENVIAR_PCB:    
-                proceso_t* pcb = malloc(sizeof(proceso_t));  
+                pcb_t* pcb = malloc(sizeof(pcb_t));  
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb, logger);
                 memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
@@ -57,7 +74,22 @@ void procesar_conexion_dispatch(void* args_void) {
                     string_array_destroy(parametros);
                     registros_cpu->PC++;
                     free(instruccion);
-                    if(hay_interrupcion(pcb->pid)){
+                    
+                    if (es_proceso_a_finalizar(pcb->pid))
+                    {
+                        enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
+                    }
+                    break;
+                    if (es_proceso_a_finalizar(pcb->pid))
+                    {
+                        enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
+                        break;
+                    }
+                
+                    registros_cpu->PC++;
+                    free(instruccion);
+                    if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid))
+                    {
                         enviar_contexto(socket_cliente, pcb, "TIMER");
                         pid_interrumpido = -1;
                         break;
@@ -69,11 +101,10 @@ void procesar_conexion_dispatch(void* args_void) {
                 break;
             default:
                 break;
+            }
         }
+        return;
     }
-    return;
-}
-
 int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, proceso_t* pcb, int socket) {
     char* comando = parametros[0];
     op_code opcode = string_to_opcode(comando);
@@ -157,16 +188,38 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
             return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
         case WAIT:
-            enviar_contexto(socket, pcb, instruccion);
-            return 0;
+          enviar_contexto(socket, pcb, instruccion);
+          sem_wait(&fin_pedido_recursos);
+          if (flag_sigue_en_exec == 1)
+          {
+              return 1;
+          } else {
+              registros_cpu->PC++;
+              return 0;
+          }
         case SIGNAL:
-            enviar_contexto(socket, pcb, instruccion);
-            return 0;
+          enviar_contexto(socket, pcb, instruccion);
+          sem_wait(&fin_pedido_recursos);
+          if (flag_sigue_en_exec == 1)
+          {
+              return 1;
+          }
+          else
+          {
+              registros_cpu->PC++;
+              return 0;
+          }
         case IO_GEN_SLEEP:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             return 0;
+        case IO_STDIN_READ:
+            return 1;
+        case IO_STDOUT_WRITE:
+            return 1;
+        case IO_FS_CREATE:
+            return 1;
         case IO_STDIN_READ:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
             uint8_t cant_paginas_read = cantidad_paginas_enviar(tercer_valor, segundo_valor);
@@ -178,28 +231,35 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
             return 0;
         case IO_FS_CREATE:
-        return 1;
+          return 1;
         case IO_FS_DELETE:
-        return 1;
+            return 1;
         case IO_FS_TRUNCATE:
-        return 1;
+            return 1;
         case IO_FS_WRITE:
-        return 1;
+            return 1;
         case IO_FS_READ:
-        return 1;
+            return 1;
         case EXIT:
             log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
             enviar_contexto(socket, pcb, instruccion);
             return 0;
-    }
+        }
 }
 
-bool hay_interrupcion(uint32_t pid) {
+bool hay_interrupcion(uint32_t pid)
+{
     return pid_interrumpido == pid;
 }
 
-void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
-    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(op_code));
+bool es_proceso_a_finalizar(uint32_t pid)
+{
+    return pid_a_finalizar == pid;
+}
+
+void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket)
+{
+    void *stream = malloc(sizeof(uint32_t) * 2 + sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, FETCH);
     agregar_uint32_t(stream, &offset, pid);
@@ -207,6 +267,7 @@ void enviar_pid_pc(uint32_t pid, uint32_t pc, int socket) {
     send(socket, stream, offset, 0);
     free(stream);
 }
+
 
 int pedir_tamanio_pagina(int socket_memoria) {
     void* stream = malloc(sizeof(op_code));
@@ -219,7 +280,7 @@ int pedir_tamanio_pagina(int socket_memoria) {
     return tam;
 }
 
-void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
+void recibir_pcb(int socket, pcb_t *pcb, t_log *logger) {
     uint32_t pid;
     uint32_t quantum;
     uint32_t PC;
@@ -261,24 +322,27 @@ void recibir_pcb(int socket, proceso_t* pcb, t_log* logger) {
     pcb->registros->DI = DI;
 }
 
-char* recibir_instruccion(int socket) {
+char *recibir_instruccion(int socket)
+{
     uint32_t size;
     recv(socket, &size, sizeof(uint32_t), 0);
-    char* instruccion = malloc(size);
+    char *instruccion = malloc(size);
     recv(socket, instruccion, size, 0);
     return instruccion;
 }
 
-uint32_t recibir_interrupcion(int socket) {
-    uint32_t pid_interrumpido_recv; 
-    recv(socket, &pid_interrumpido_recv, sizeof(uint32_t), 0); 
+uint32_t recibir_interrupcion(int socket)
+{
+    uint32_t pid_interrumpido_recv;
+    recv(socket, &pid_interrumpido_recv, sizeof(uint32_t), 0);
     return pid_interrumpido_recv;
 }
 
-void enviar_contexto(int socket, proceso_t* pcb, char* instruccion) {
+
+void enviar_contexto(int socket, pcb_t *pcb, char *instruccion) {
     memcpy(pcb->registros, registros_cpu, sizeof(registros_t));
     uint32_t tamanio = string_length(instruccion) + 1;
-    void* stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
+    void *stream = malloc(10 * sizeof(uint32_t) + 4 * sizeof(uint8_t) + tamanio);
     int offset = 0;
     agregar_uint32_t(stream, &offset, pcb->pid);
     agregar_uint32_t(stream, &offset, pcb->quantum);
@@ -324,35 +388,59 @@ void set_registros(char* primer_parametro, uint32_t valor) {
     }
 }
 
-uint32_t get_valor_registro(char* registro) {
-    if(registro[strlen(registro) -1] == '\n') registro[strlen(registro) -1] = '\0';
-    if (strcmp(registro, "AX") == 0) {
+uint32_t get_valor_registro(char *registro)
+{
+    if (registro[strlen(registro) - 1] == '\n')
+        registro[strlen(registro) - 1] = '\0';
+    if (strcmp(registro, "AX") == 0)
+    {
         return registros_cpu->AX;
-    } else if (strcmp(registro, "BX") == 0) {
+    }
+    else if (strcmp(registro, "BX") == 0)
+    {
         return registros_cpu->BX;
-    } else if (strcmp(registro, "CX") == 0) {
+    }
+    else if (strcmp(registro, "CX") == 0)
+    {
         return registros_cpu->CX;
-    } else if (strcmp(registro, "DX") == 0) {
+    }
+    else if (strcmp(registro, "DX") == 0)
+    {
         return registros_cpu->DX;
-    } else if (strcmp(registro, "EAX") == 0) {
+    }
+    else if (strcmp(registro, "EAX") == 0)
+    {
         return registros_cpu->EAX;
-    } else if (strcmp(registro, "EBX") == 0) {
+    }
+    else if (strcmp(registro, "EBX") == 0)
+    {
         return registros_cpu->EBX;
-    } else if (strcmp(registro, "ECX") == 0) {
+    }
+    else if (strcmp(registro, "ECX") == 0)
+    {
         return registros_cpu->ECX;
-    } else if (strcmp(registro, "EDX") == 0) {
+    }
+    else if (strcmp(registro, "EDX") == 0)
+    {
         return registros_cpu->EDX;
-    } else if (strcmp(registro, "PC") == 0) {
+    }
+    else if (strcmp(registro, "PC") == 0)
+    {
         return registros_cpu->PC;
-    } else if (strcmp(registro, "SI") == 0) {
+    }
+    else if (strcmp(registro, "SI") == 0)
+    {
         return registros_cpu->SI;
-    } else if (strcmp(registro, "DI") == 0) {
+    }
+    else if (strcmp(registro, "DI") == 0)
+    {
         return registros_cpu->DI;
     }
 }
 
-void enviar_resize(uint32_t tamanio, uint32_t pid) {
-    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(op_code));
+void enviar_resize(uint32_t tamanio, uint32_t pid)
+{
+    void *stream = malloc(sizeof(uint32_t) * 2 + sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, RESIZE);
     agregar_uint32_t(stream, &offset, tamanio);

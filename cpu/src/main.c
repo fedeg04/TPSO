@@ -19,6 +19,15 @@ int servers_escuchar()
     server_escuchar(cpu_dispatch_fd, logger_cpu, (procesar_conexion_func_t)procesar_conexion_dispatch, "CPU dispatch");
 }
 
+void inicializar_semaforos() {
+    sem_init(&fin_pedido_recursos, 0, 0);
+    flag_sigue_en_exec = 1;
+}
+
+void liberar_semaforos() {
+    sem_destroy(&fin_pedido_recursos);
+}
+
 int main(int argc, char *argv[])
 {
     logger_cpu = iniciar_logger("cpu.log", "CPU: ");
@@ -26,11 +35,10 @@ int main(int argc, char *argv[])
     get_config(config_cpu);
 
     registros_cpu = inicializar_registros();
-    
+    inicializar_semaforos();
     inicializar_tlb();
 
     controlar_seniales(logger_cpu);
-
     // Se conecta como cliente a la memoria
     memoria_fd = generar_conexion(logger_cpu, "memoria", ip_memoria, puerto_memoria, config_cpu);
     tamanio_pagina = (int)pedir_tamanio_pagina(memoria_fd);
@@ -44,6 +52,7 @@ int main(int argc, char *argv[])
 
     // TODO: ver como sincronizar el comienzo de cada server y del cliente.
 
+    liberar_semaforos();
     liberar_conexion(memoria_fd);
     terminar_programa(logger_cpu, config_cpu);
     free(registros_cpu);

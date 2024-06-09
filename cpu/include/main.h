@@ -6,6 +6,7 @@
 #include <../include/init.h>
 #include <../include/conexion.h>
 #include <../include/serializacion.h>
+#include <semaphore.h>
 #include <../include/tlb.h>
 #include <../include/seniales.h>
 
@@ -22,7 +23,12 @@ char* algoritmo_tlb;
 int tamanio_pagina;
 int servers_escuchar();
 registros_t* registros_cpu;
+sem_t fin_pedido_recursos;
+void inicializar_semaforos();
+void liberar_semaforos();
+int flag_sigue_en_exec;
 tlb_t* tlb;
 t_queue* cola_fifo_tlb;
+
 
 #endif

@@ -3,10 +3,10 @@ void enviar_proceso_io_gen_sleep(proceso_t *proceso, char *interfaz_sleep, uint3
 {
     if (!strcmp("GENERICA", interfaz_sleep))
     {
-        pthread_mutex_lock(&mutex_generica_list);
         proceso_sleep_t* proceso_a_sleep = malloc(sizeof(proceso_sleep_t));
         proceso_a_sleep->proceso = proceso;
         proceso_a_sleep->uni_de_trabajo = uni_de_trabajo;
+        pthread_mutex_lock(&mutex_generica_list);
         list_add(pcbs_generica, proceso_a_sleep);
         pthread_mutex_unlock(&mutex_generica_list);
         sem_post(&pcb_esperando_generica);
@@ -15,8 +15,7 @@ void enviar_proceso_io_gen_sleep(proceso_t *proceso, char *interfaz_sleep, uint3
     {
         log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ INCORRECTA", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso->pid);
-        ingresar_a_exit(proceso);
-        realizar_exit();
+        entrar_a_exit(proceso);
     }
 }
 
@@ -24,7 +23,7 @@ int estaConectada(char *interfaz)
 {
     return dictionary_has_key(diccionario_interfaces, interfaz);
 }
-
+/*
 void hacer_io_gen_sleep()
 {
         sem_wait(&pcb_esperando_generica);
@@ -49,23 +48,13 @@ void hacer_io_gen_sleep()
     {
         log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ NO CONECTADA", proceso_a_sleep->proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_sleep->proceso->pid);
-        ingresar_a_exit(proceso_a_sleep->proceso);
+        proceso_t* proceso = proceso_a_sleep->proceso;
         free(proceso_a_sleep);
         pthread_mutex_unlock(&mutex_generica_exec);
-        realizar_exit();   
+        entrar_a_exit(proceso);
     }
 }
-
-void recibir_fin_de_sleep()
-{
-    pthread_mutex_lock(&mutex_generica_list);
-    proceso_sleep_t *proceso_de_sleep = list_remove(pcbs_generica, 0);
-    proceso_t *proceso_a_desbloquear = proceso_de_sleep->proceso;
-    free(proceso_de_sleep);
-    pthread_mutex_unlock(&mutex_generica_list);
-    pthread_mutex_unlock(&mutex_generica_exec);
-    desbloquear_proceso(proceso_a_desbloquear);
-}
+*/
 
 void desbloquear_proceso(proceso_t *proceso)
 {
@@ -89,4 +78,273 @@ void desbloquear_proceso(proceso_t *proceso)
         ingresar_a_exec();
     }
 
+}
+
+void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiempo_en_cpu, t_temporal* timer) {
+    if(existe_recurso(recurso_wait)) {
+        pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+        list_add(lista_de_recurso(recurso_wait), proceso);
+        pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+        if(hay_recursos_de(recurso_wait)) {
+            pedir_recurso(recurso_wait);
+            volver_a_exec(proceso, tiempo_en_cpu, timer);
+        }
+        else {
+            void* stream = malloc(sizeof(op_code));
+            int offset = 0;
+            agregar_opcode(stream, &offset, BLOQUEADO_RECURSO);
+            send(cpu_interrupt_fd, stream, offset, 0);
+            temporal_stop(timer);
+        if (!strcmp(algoritmo_planificacion, "VRR"))
+    {
+        if (temporal_gettime(timer) - tiempo_en_cpu < proceso->quantum)
+        {
+            proceso->quantum -= temporal_gettime(timer) - tiempo_en_cpu;
+        }
+        else
+        {
+            proceso->quantum = quantum;
+        }
+    }
+            temporal_destroy(timer);
+            liberar_cpu();
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, recurso_wait);
+            pedir_recurso(recurso_wait);
+            verificar_detencion_de_planificacion();
+            desbloquear_proceso(proceso);
+        }
+
+    }
+    else {
+        entrar_a_exit(proceso);
+    }
+}
+
+int posicion_de_recurso(char* recurso_wait) {
+    for(int i=0; i< cantidad_recursos; i++) {
+        if(!strcmp(recurso_wait, recursos[i])){
+            return i;
+        }
+    }
+}
+
+t_list* lista_de_recurso(char* recurso) {
+    return pcbs_recursos[posicion_de_recurso(recurso)];
+}
+
+bool hay_recursos_de(char* recurso) {
+    pthread_mutex_lock(&mutex_recursos_instancias[posicion_de_recurso(recurso)]);
+    bool hay_recursos = instancias_recursos[posicion_de_recurso(recurso)] > 0;
+    pthread_mutex_unlock(&mutex_recursos_instancias[posicion_de_recurso(recurso)]);
+    return hay_recursos;
+}
+
+bool existe_recurso(char* recurso) {
+    for(int i=0; i< cantidad_recursos; i++) {
+        if(!strcmp(recurso, recursos[i])){
+            return true;
+        }
+    }
+    return false;
+}
+void pedir_recurso(char* recurso_wait) {
+    int indice = posicion_de_recurso(recurso_wait);
+    sem_wait(&pcb_esperando_recurso[indice]);
+    pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+    proceso_t* proceso = list_remove(lista_de_recurso(recurso_wait), 0);
+    pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+    pthread_mutex_lock(&mutex_recursos_instancias[indice]);
+    instancias_recursos[indice]--;
+    pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
+    proceso->recursos[indice]++;
+}
+
+void enviar_proceso_a_signal(proceso_t* proceso, char* recurso_signal, uint32_t tiempo_en_cpu, t_temporal* timer) {
+    if(existe_recurso(recurso_signal)) {
+        devolver_recurso(recurso_signal, proceso);
+        volver_a_exec(proceso, tiempo_en_cpu, timer);
+    }
+    else {
+        entrar_a_exit(proceso);
+    }
+}
+
+void devolver_recurso(char* recurso_signal, proceso_t* proceso) {
+int indice = posicion_de_recurso(recurso_signal);
+    pthread_mutex_lock(&mutex_recursos_instancias[indice]);
+    instancias_recursos[indice]++;
+    pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
+    if(proceso->recursos[indice] > 0){
+    proceso->recursos[indice]--;
+    }
+    sem_post(&pcb_esperando_recurso[indice]);
+}
+
+void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, char* tipo_interfaz, void (*hacer_peticion)(proceso_a_interfaz_t*, interfaz_t*)) {
+    interfaz_t* interfaz_solicitada = buscar_interfaz(proceso_a_interfaz->interfaz);
+    if(interfaz_solicitada != NULL) {
+        if(estaConectada(proceso_a_interfaz->interfaz)) {
+            if(!strcmp(tipo_interfaz, interfaz_solicitada->tipo)){
+                hacer_peticion(proceso_a_interfaz, interfaz_solicitada);
+            }
+            else{
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OPERACIÓN INVÁLIDA PARA %s", proceso_a_interfaz->proceso->pid, proceso_a_interfaz->interfaz);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
+        entrar_a_exit(proceso_a_interfaz->proceso);
+            }
+        }
+        else {
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ NO CONECTADA", proceso_a_interfaz->proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
+        entrar_a_exit(proceso_a_interfaz->proceso);
+        }
+    }
+    else {
+    log_info(logger_kernel, "Finaliza el proceso %d - Motivo: LA INTERFAZ NO EXISTE", proceso_a_interfaz->proceso->pid);
+    log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
+    entrar_a_exit(proceso_a_interfaz->proceso);   
+    }
+    /*
+ if(!strcmp(tipo_interfaz, proceso_a_interfaz->interfaz)) {
+        if(estaConectada(proceso_a_interfaz->interfaz)){
+                    hacer_peticion(proceso_a_interfaz);
+        }
+        else {
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ NO CONECTADA", proceso_a_interfaz->proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
+        entrar_a_exit(proceso_a_interfaz->proceso);
+
+        }
+    }
+    else {
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ INCORRECTA", proceso_a_interfaz->proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
+        entrar_a_exit(proceso_a_interfaz->proceso);
+    }
+    */
+}
+
+interfaz_t* buscar_interfaz(char* nombre) {
+    pthread_mutex_lock(&mutex_lista_interfaces);
+    interfaz_a_consultar = nombre;
+    interfaz_t* interfaz_buscada = list_find(interfaces, (void*) es_la_interfaz);
+    pthread_mutex_unlock(&mutex_lista_interfaces);
+    return interfaz_buscada;
+}
+
+bool es_la_interfaz(interfaz_t* interfaz) {
+    return !strcmp(interfaz_a_consultar,interfaz->nombre);
+}
+void hacer_io_gen_sleep(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz) {
+    proceso_t* proceso = proceso_interfaz->proceso;
+    uint32_t uni_de_trabajo = proceso_interfaz->uni_de_trabajo;
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    agregar_opcode(stream, &offset, IO_GEN_SLEEP);
+    agregar_uint32_t(stream, &offset, uni_de_trabajo);
+    int socket_generica = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_generica, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+}
+
+void hacer_io_stdin_read(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz) {
+    proceso_t* proceso = proceso_interfaz->proceso;
+    uint32_t cant_paginas = proceso_interfaz->cant_paginas;
+    char* direcciones_bytes = proceso_interfaz->direcciones_bytes;
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code) + 3 * sizeof(uint32_t) + string_length(direcciones_bytes) + 1);
+    int offset = 0;
+    agregar_opcode(stream, &offset, IO_STDIN_READ);
+    agregar_uint32_t(stream, &offset, proceso->pid);
+    agregar_uint32_t(stream, &offset, cant_paginas);
+    agregar_string(stream, &offset, direcciones_bytes);
+    int socket_generica = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_generica, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+}
+
+void hacer_io_stdout_write(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz) {
+    proceso_t* proceso = proceso_interfaz->proceso;
+    uint32_t cant_paginas = proceso_interfaz->cant_paginas;
+    char* direcciones_bytes = proceso_interfaz->direcciones_bytes;
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code) + 3 * sizeof(uint32_t) + string_length(direcciones_bytes) + 1);
+    int offset = 0;
+    agregar_opcode(stream, &offset, IO_STDOUT_WRITE);
+    agregar_uint32_t(stream, &offset, proceso->pid);
+    agregar_uint32_t(stream, &offset, cant_paginas);
+    agregar_string(stream, &offset, direcciones_bytes);
+    int socket_generica = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_generica, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+}
+
+void volver_a_exec(proceso_t* proceso, uint32_t tiempo_en_cpu, t_temporal* timer) {
+    temporal_stop(timer);
+    if(!strcmp("VRR", algoritmo_planificacion)) {
+     proceso->quantum += tiempo_en_cpu;
+    }
+    void* stream = malloc(sizeof(op_code));
+    int offset = 0;
+    agregar_opcode(stream, &offset, PEDIDO_RECURSO);
+    send(cpu_interrupt_fd, stream, offset, 0);
+    free(stream);
+    esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
+}
+
+void recibir_fin_io_stdin_read(interfaz_t* interfaz) {
+    pthread_mutex_lock(&mutex_stdin_list);
+    proceso_t *proceso_a_desbloquear = list_remove(pcbs_stdin, 0);
+    pthread_mutex_unlock(&mutex_stdin_list);
+    pthread_mutex_unlock(&mutex_stdin_exec);
+    desbloquear_proceso(proceso_a_desbloquear);
+}
+
+void recibir_fin_io_stdout_write() {
+    pthread_mutex_lock(&mutex_stdout_list);
+    proceso_t *proceso_a_desbloquear = list_remove(pcbs_stdout, 0);
+    pthread_mutex_unlock(&mutex_stdout_list);
+    pthread_mutex_unlock(&mutex_stdout_exec);
+    desbloquear_proceso(proceso_a_desbloquear);
+}
+
+void recibir_fin_de_peticion(interfaz_t* interfaz)
+{
+    if(interfaz->fin_de_proceso!= 1) {
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    proceso_t *proceso_a_desbloquear = list_remove(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_unlock(&interfaz->mutex_exec);
+    verificar_detencion_de_planificacion();
+    desbloquear_proceso(proceso_a_desbloquear);
+    }
+    else {
+    pthread_mutex_unlock(&interfaz->mutex_exec);
+        sem_post(&interfaz->sem_eliminar_proceso);
+    }
 }
