@@ -7,6 +7,7 @@
 #include <../include/protocolo.h>
 #include <../include/serializacion.h>
 #include <../include/seniales.h>
+#include <readline/readline.h>
 
 t_log* logger_io;
 char* tipo_interfaz;
