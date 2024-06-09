@@ -42,6 +42,7 @@ void procesar_conexion_interrupt(void *args_void)
 
 void procesar_conexion_dispatch(void *args_void)
 {
+
     conexion_args_t *args = (conexion_args_t *)args_void;
     int socket_cliente = args->socket_cliente;
     t_log *logger = args->logger;
@@ -60,8 +61,7 @@ void procesar_conexion_dispatch(void *args_void)
                 pcb->registros = malloc(sizeof(registros_t));
                 recibir_pcb(socket_cliente, pcb, logger);
                 memcpy(registros_cpu, pcb->registros, sizeof(registros_t));
-                while (1)
-                {
+                while (1) {
                     log_info(logger, "PID: <%d> - FETCH - Program Counter: <%d>", pcb->pid, registros_cpu->PC);
                     enviar_pid_pc(pcb->pid, registros_cpu->PC, memoria_fd);
                     char* instruccion = recibir_instruccion(memoria_fd);
@@ -69,27 +69,19 @@ void procesar_conexion_dispatch(void *args_void)
                     if(!ejecutar_instruccion(parametros, instruccion, logger, pcb, socket_cliente)) {
                         free(instruccion);
                         string_array_destroy(parametros);
+                        if (es_proceso_a_finalizar(pcb->pid)) {
+                            enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
+                        }
                         break;
                     }
                     string_array_destroy(parametros);
                     registros_cpu->PC++;
                     free(instruccion);
-                    
-                    if (es_proceso_a_finalizar(pcb->pid))
-                    {
-                        enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
-                    }
-                    break;
-                    if (es_proceso_a_finalizar(pcb->pid))
-                    {
+                    if (es_proceso_a_finalizar(pcb->pid)) {
                         enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
                         break;
                     }
-                
-                    registros_cpu->PC++;
-                    free(instruccion);
-                    if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid))
-                    {
+                    if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid)) {
                         enviar_contexto(socket_cliente, pcb, "TIMER");
                         pid_interrumpido = -1;
                         break;
@@ -171,7 +163,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             if(primer_valor != 0) {
                 set_registros("PC", segundo_valor);
             }
-        return 1;
+            return 1;
         case RESIZE:
             primer_valor = atoi(primer_parametro);
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
@@ -188,38 +180,29 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
             return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
         case WAIT:
-          enviar_contexto(socket, pcb, instruccion);
-          sem_wait(&fin_pedido_recursos);
-          if (flag_sigue_en_exec == 1)
-          {
-              return 1;
-          } else {
-              registros_cpu->PC++;
-              return 0;
-          }
+            enviar_contexto(socket, pcb, instruccion);
+            sem_wait(&fin_pedido_recursos);
+            if (flag_sigue_en_exec == 1)
+            {
+                return 1;
+            } else {
+                registros_cpu->PC++;
+                return 0;
+            }
         case SIGNAL:
-          enviar_contexto(socket, pcb, instruccion);
-          sem_wait(&fin_pedido_recursos);
-          if (flag_sigue_en_exec == 1)
-          {
-              return 1;
-          }
-          else
-          {
-              registros_cpu->PC++;
-              return 0;
-          }
+            enviar_contexto(socket, pcb, instruccion);
+            sem_wait(&fin_pedido_recursos);
+            if (flag_sigue_en_exec == 1) {
+                return 1;
+            } else {
+                registros_cpu->PC++;
+                return 0;
+            }
         case IO_GEN_SLEEP:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             return 0;
-        case IO_STDIN_READ:
-            return 1;
-        case IO_STDOUT_WRITE:
-            return 1;
-        case IO_FS_CREATE:
-            return 1;
         case IO_STDIN_READ:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
             uint8_t cant_paginas_read = cantidad_paginas_enviar(tercer_valor, segundo_valor);
@@ -228,7 +211,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
         case IO_STDOUT_WRITE:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
             uint8_t cant_paginas_write = cantidad_paginas_enviar(tercer_valor, segundo_valor);
-            envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_read, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
+            envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_write, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
             return 0;
         case IO_FS_CREATE:
           return 1;
@@ -581,9 +564,8 @@ char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, ui
     char* direcciones_tamanios = malloc(cant_digitos(cant_pags) + 2);
     sprintf(direcciones_tamanios, "%u", cant_pags);
     string_append(&direcciones_tamanios, " ");
-    while (tamanio)
-    {
-        uint16_t marco = pedir_marco(pid, nro_pagina, logger);
+    for (int i = 0; tamanio; i++) {
+        uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
         uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
         uint32_t tamanio_df;
         if(cant_pags > 1) {
@@ -609,11 +591,20 @@ char* generar_envio_direcciones_tamanios(uint8_t cant_pags, uint32_t tamanio, ui
 }
 
 void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket, uint32_t nro_pagina, t_log* logger) {
-    char* io_stdin_a_kernel = malloc(strlen(interfaz) + 1);
-    strcpy(io_stdin_a_kernel, interfaz);
+    char* opcode_str;
+    if (opcode == IO_STDIN_READ) {
+        opcode_str = "IO_STDIN_READ";
+    } else if (opcode == IO_STDOUT_WRITE) {
+        opcode_str = "IO_STDOUT_WRITE";
+    }
+    char* io_stdin_a_kernel = malloc(strlen(interfaz) + strlen(opcode_str) + 2);
+    strcpy(io_stdin_a_kernel, opcode_str);
+    string_append(&io_stdin_a_kernel, " ");
+    string_append(&io_stdin_a_kernel, interfaz);
     char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas_read, tamanio, desplazamiento, nro_pagina, pcb->pid, logger);
     string_append(&io_stdin_a_kernel, " ");
     string_append(&io_stdin_a_kernel, envio_direcciones_tamanios);
+    registros_cpu->PC++;
     enviar_contexto(socket, pcb, io_stdin_a_kernel);
     free(io_stdin_a_kernel);
     free(envio_direcciones_tamanios);
@@ -661,7 +652,7 @@ bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, 
     uint8_t bytes_utilizados = 0;
     for (int i = 0; i < cant_pags; i++)
     {
-        uint16_t marco = pedir_marco(pid, nro_pagina, logger);
+        uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
         uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
         void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) * 2);
         int offset = 0;
