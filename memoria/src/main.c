@@ -6,7 +6,17 @@ void get_config(t_config* config) {
     tam_pagina = (uint32_t)config_get_int_value(config, "TAM_PAGINA");
     path_instrucciones = config_get_string_value(config, "PATH_INSTRUCCIONES");
     retardo_respuesta = config_get_int_value(config, "RETARDO_RESPUESTA");
+}
 
+
+void inicializar_semaforos()
+{
+    pthread_mutex_init(&mutex_memoria, NULL);
+}
+
+void liberar_semaforos()
+{
+    pthread_mutex_destroy(&mutex_memoria);
 }
 
 int main(int argc, char* argv[]) {
@@ -16,6 +26,9 @@ int main(int argc, char* argv[]) {
     get_config(config_memoria);
 
     archivos_procesos = list_create();
+
+    inicializar_semaforos();
+
     //PAGINAS
     memoria = malloc(tam_memoria);
     tablas_paginas_memoria = list_create();
@@ -24,12 +37,13 @@ int main(int argc, char* argv[]) {
     memset(bitarray, 0, sizeof(bitarray));
     bitarray_tabla = bitarray_create(bitarray,(cant_marcos+7)/8);
 
-    //controlar_seniales(logger_memoria);
+    
 
     //Empieza el servidor
     int memoria_fd = iniciar_servidor(logger_memoria, puerto_escucha, "memoria");
     while(server_escuchar(memoria_fd, logger_memoria, (procesar_conexion_func_t)procesar_conexion, "memoria"));
 
+    liberar_semaforos();
     terminar_programa(logger_memoria, config_memoria);
     return 0;
 }
