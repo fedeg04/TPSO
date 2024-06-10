@@ -55,7 +55,7 @@ char* buscar_instruccion_en(FILE* f, uint32_t pc) {
 }
 
 void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso) {
-    //free(archivo_proceso->path);
+    free(archivo_proceso->path);
     free(archivo_proceso);
 }
 

@@ -1,0 +1,4 @@
+INICIAR_PROCESO procesos/proceso4.txt
+INICIAR_PROCESO procesos/proceso4.txt
+INICIAR_PROCESO procesos/proceso4.txt
+INICIAR_PROCESO procesos/proceso4.txt

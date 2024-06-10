@@ -171,31 +171,44 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
             return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
         case WAIT:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
+            registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             op_code opcode;
             recv(socket, &opcode, sizeof(op_code), MSG_WAITALL);
             log_info(logger, "OPCODE: %d", opcode);
             if(opcode == VUELTA_A_EXEC) {
+                registros_cpu->PC--;
                 return 1;
             }
             else if(opcode == BLOQUEADO_RECURSO) {
+                if(pid_interrumpido){
+                    pid_interrumpido = false;
+                }
                 return 0;
             }
             else if(opcode == RECURSO_INVALIDO) {
                 enviar_contexto(socket, pcb, "RECURSO_INVALIDO");
+                if(pid_interrumpido){
+                    pid_interrumpido = false;
+                }
                 return 0;
             }
             return 0;
         case SIGNAL:
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
             enviar_contexto(socket, pcb, instruccion);
             op_code opCode;
             recv(socket, &opCode, sizeof(op_code), MSG_WAITALL);
-            log_info(logger, "OPCODE: %d", opcode);
+            log_info(logger, "OPCODE: %d", opCode);
             if(opCode == VUELTA_A_EXEC){
                 return 1;
             }
             else if(opCode == RECURSO_INVALIDO){
                 enviar_contexto(socket, pcb, "RECURSO_INVALIDO");
+                if(pid_interrumpido){
+                    pid_interrumpido = false;
+                }
                 return 0;
             }
         case IO_GEN_SLEEP:
