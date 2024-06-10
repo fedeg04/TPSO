@@ -634,9 +634,7 @@ void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint
         bytes_utilizados += bytes_restantes;
         bytes_restantes = cant_bytes - bytes_utilizados;
         desplazamiento = 0;
-    }
-    for (int i = 0; i < cant_pags; i++)
-    {
+
         uint16_t cant_bytes_leer;
         recv(memoria_fd, &cant_bytes_leer, sizeof(uint16_t), 0);
         char* lectura_parcial = malloc(cant_bytes_leer + 1);

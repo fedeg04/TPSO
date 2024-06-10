@@ -22,6 +22,7 @@ void procesar_conexion(void* args_void) {
                 free(stream);
                 break;
             case INICIAR_PROCESO:
+                usleep(retardo_respuesta * 1000);
                 uint32_t size;
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
                 char* path = malloc(size);
@@ -37,25 +38,24 @@ void procesar_conexion(void* args_void) {
                 } else {
                     pid = 0;
                 }
-                usleep(retardo_respuesta * 1000);
                 enviar_pid(socket_cliente, pid);
                 break;
             case FINALIZAR_PROCESO:
+                usleep(retardo_respuesta * 1000);
                 uint32_t pid_a_finalizar; 
                 recv(socket_cliente, &pid_a_finalizar, sizeof(uint32_t), 0);
-                usleep(retardo_respuesta * 1000);
                 log_info(logger, "PID: <%d> - Tamaño: <%d>", pid_a_finalizar, cantidad_paginas_proceso(pid_a_finalizar));
                 reducir_tamanio_proceso(pid_a_finalizar, tamanio_proceso(pid_a_finalizar), logger);
                 eliminar_tabla(pid_a_finalizar);
                 eliminar_archivo_proceso(archivos_procesos, pid_a_finalizar);
                 break;
             case FETCH:
+                usleep(retardo_respuesta * 1000);
                 uint32_t pid_a_buscar; 
                 recv(socket_cliente, &pid_a_buscar, sizeof(uint32_t), 0);
                 uint32_t pc;
                 recv(socket_cliente, &pc, sizeof(uint32_t), 0);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
-                usleep(retardo_respuesta * 1000);
                 if(instruccion[strlen(instruccion) - 1] == '\n') {
                     instruccion[strlen(instruccion) - 1] = '\0';
                 } 
@@ -63,6 +63,7 @@ void procesar_conexion(void* args_void) {
                 free(instruccion);
                 break;
             case LEER:
+                usleep(retardo_respuesta * 1000);
                 uint16_t dir_fis_mov_in;
                 uint16_t bytes_mov_in;  
                 uint32_t pid_mov_in;
@@ -71,10 +72,10 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, &bytes_mov_in, sizeof(uint16_t), 0);
                 void* lectura = malloc(bytes_mov_in);
                 leer(lectura, dir_fis_mov_in, bytes_mov_in, logger, pid_mov_in);
-                usleep(retardo_respuesta * 1000);
                 enviar_lectura(socket_cliente, lectura, bytes_mov_in);
                 break;
             case ESCRIBIR:
+                usleep(retardo_respuesta * 1000);
                 uint16_t dir_fis_mov_out;
                 uint16_t bytes_mov_out;
                 uint32_t pid_mov_out;
@@ -84,10 +85,10 @@ void procesar_conexion(void* args_void) {
                 void* valor_mov_out = malloc(bytes_mov_out);
                 recv(socket_cliente, valor_mov_out, bytes_mov_out, 0);
                 escribir(dir_fis_mov_out, valor_mov_out, bytes_mov_out, logger, pid_mov_out);
-                usleep(retardo_respuesta * 1000);
                 enviar_ok(socket_cliente);
                 break;
             case RESIZE:
+                usleep(retardo_respuesta * 1000);
                 uint32_t tamanio;
                 recv(socket_cliente, &tamanio, sizeof(uint32_t), 0);
                 uint32_t pid_resize;
@@ -101,7 +102,6 @@ void procesar_conexion(void* args_void) {
                     log_info(logger, "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Reducir: <%d>", pid_resize, tam_proceso, tam_proceso - tamanio);
                     reducir_tamanio_proceso(pid_resize, tam_proceso - tamanio, logger);
                 }
-                usleep(retardo_respuesta * 1000);
                 if(response) {
                     enviar_out_of_memory(socket_cliente);
                 } else {
@@ -109,6 +109,7 @@ void procesar_conexion(void* args_void) {
                 }
                 break;
             case PEDIR_MARCO:
+                usleep(retardo_respuesta * 1000);
                 uint32_t pid_marco;
                 uint32_t nro_pagina;
                 recv(socket_cliente, &pid_marco, sizeof(uint32_t), 0);
@@ -119,7 +120,6 @@ void procesar_conexion(void* args_void) {
                 void* stream_marco = malloc(sizeof(uint16_t));
                 int offset_marco = 0;
                 agregar_uint16_t(stream_marco, &offset_marco, pagina->marco);
-                usleep(retardo_respuesta * 1000);
                 send(socket_cliente, stream_marco, offset_marco, 0);
                 free(stream_marco);
                 break;

@@ -31,7 +31,7 @@ void procesar_conexion(void* args_void) {
                 break;
             case STDIN:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 guardar_interfaz(nombre, "STDIN");
                 conectar_interfaz(nombre, socket_cliente);
@@ -39,7 +39,7 @@ void procesar_conexion(void* args_void) {
                 break;
             case STDOUT:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 guardar_interfaz(nombre, "STDOUT");
                 conectar_interfaz(nombre, socket_cliente);
@@ -47,7 +47,7 @@ void procesar_conexion(void* args_void) {
                 break;
             case DIALFS:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 guardar_interfaz(nombre, "DIALFS");
                 conectar_interfaz(nombre, socket_cliente);
@@ -55,32 +55,35 @@ void procesar_conexion(void* args_void) {
                 break;
             case INTERFAZ_BYE:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 desconectar_interfaz(nombre);
                 free(nombre);
                 break;
             case FIN_DE_SLEEP:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 log_info(logger, "VOLVIO PROCESO DE HACER SLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP");
                 interfaz = buscar_interfaz(nombre);
                 sem_post(&interfaz->sem_vuelta);
+                free(nombre);
                 break;
             case FIN_DE_STDIN:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 interfaz = buscar_interfaz(nombre);
                 sem_post(&interfaz->sem_vuelta);
+                free(nombre);
                 break;
             case FIN_DE_STDOUT:
                 recv(socket_cliente, &tam, sizeof(uint32_t), 0);
-                nombre =malloc(tam);
+                nombre = malloc(tam);
                 recv(socket_cliente, nombre, tam, 0);
                 interfaz = buscar_interfaz(nombre);
                 sem_post(&interfaz->sem_vuelta);
+                free(nombre);
                 break;
             default:
         }

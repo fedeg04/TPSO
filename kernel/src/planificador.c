@@ -261,9 +261,9 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
     log_info(logger, "Motivo: %s", motivo_de_desalojo);
     char **substrings;
     char *instruccion_de_motivo_string;
-    if (motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] == '\n')
+    if (motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] == '\n') {
         motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] = '\0';
-
+    }
     if (string_contains(motivo_de_desalojo, " "))
     {
         substrings = string_split(motivo_de_desalojo, " ");
@@ -288,126 +288,118 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
     proceso_a_interfaz_t* proceso_interfaz = malloc(sizeof(proceso_a_interfaz_t));
     proceso_interfaz->proceso = proceso;
     log_info(logger_kernel, "%d", instruccion_de_motivo);
-    switch (instruccion_de_motivo)
-    {
-    case IO_GEN_SLEEP:
-        proceso_interfaz->interfaz = malloc(string_length(substrings[1]));  
-        proceso_interfaz->interfaz = substrings[1];
-        proceso_interfaz->uni_de_trabajo = atoi(substrings[2]);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        enviar_proceso_a_interfaz(proceso_interfaz, "GENERICA", hacer_io_gen_sleep);
-        free(proceso_interfaz->interfaz);
+
+    switch (instruccion_de_motivo) {
+        case IO_GEN_SLEEP:
+            proceso_interfaz->interfaz = substrings[1];
+            proceso_interfaz->uni_de_trabajo = atoi(substrings[2]);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            enviar_proceso_a_interfaz(proceso_interfaz, "GENERICA", hacer_io_gen_sleep);
+            break;
+        case IO_STDIN_READ:
+            proceso_interfaz->interfaz = substrings[1];
+            proceso_interfaz->cant_paginas = atoi(substrings[2]);
+            proceso_interfaz->direcciones_bytes = substrings[3];
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            enviar_proceso_a_interfaz(proceso_interfaz, "STDIN", hacer_io_stdin_read);
+            break;
+        case IO_STDOUT_WRITE:
+            proceso_interfaz->interfaz = substrings[1];
+            proceso_interfaz->cant_paginas = atoi(substrings[2]);
+            proceso_interfaz->direcciones_bytes = substrings[3];
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
+            break;
+        case IO_FS_CREATE:
+            char *interfaz_create = substrings[1];
+            char *nombre_archivo_create = substrings[2];
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            break;
+        case IO_FS_DELETE:
+            char *interfaz_delete = substrings[1];
+            char *nombre_archivo_delete = substrings[2];
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            break;
+        case IO_FS_TRUNCATE:
+            char *interfaz_truncate = substrings[1];
+            char *nombre_archivo_truncate = substrings[2];
+            uint32_t registro_tamanio_truncate = atoi(substrings[3]);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            break;
+        case IO_FS_WRITE:
+            char *interfaz_write = substrings[1];
+            char *nombre_archivo_write = substrings[2];
+            uint32_t registro_direccion_write = atoi(substrings[3]);
+            uint32_t registro_tamanio_write = atoi(substrings[4]);
+            // TODO: registro puntero archivo
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            break;
+        case IO_FS_READ:
+            char *interfaz_read = substrings[1];
+            char *nombre_archivo_read = substrings[2];
+            uint32_t registro_direccion_read = atoi(substrings[3]);
+            uint32_t registro_tamanio_read = atoi(substrings[4]);
+            // TODO: registro puntero archivo
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+            break;
+        case WAIT:
+            char *recurso_wait = substrings[1];
+            enviar_proceso_a_wait(proceso, recurso_wait, tiempo_en_cpu, timer);
+            break;
+        case SIGNAL:
+            char *recurso_signal = substrings[1];
+            enviar_proceso_a_signal(proceso, recurso_signal, tiempo_en_cpu, timer);
+            break;
+        case EXIT:
+            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: SUCCESS", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+            entrar_a_exit(proceso);
+            break;
+        case TIMER:
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <READY>", proceso->pid);
+            proceso->quantum=  quantum;
+            pthread_mutex_unlock(&mutex_ready_list);
+            list_add(pcbs_ready, proceso);
+            mostrar_pids_ready(pcbs_ready, "READY");
+            pthread_mutex_unlock(&mutex_ready_list);
+            sem_post(&pcb_esperando_exec);
+            ingresar_a_exec();
+            break;
+        case RESIZE:
+            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT OF MEMORY", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+            entrar_a_exit(proceso);
+            break;
+        case FINALIZAR_PROCESO:
+            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+            entrar_a_exit(proceso);
+            break;
+         case RECURSO_INVALIDO:
+          log_info(logger_kernel, "Finaliza el proceso %d - Motivo: RECURSO_INVALIDO", proceso->pid);
+          log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+          entrar_a_exit(proceso);
         break;
-    case IO_STDIN_READ:
-        proceso_interfaz->interfaz = malloc(string_length(substrings[1]));
-        proceso_interfaz->interfaz = substrings[1];
-        proceso_interfaz->cant_paginas = atoi(substrings[2]);
-        proceso_interfaz->direcciones_bytes = malloc(string_length(substrings[3]));
-        proceso_interfaz->direcciones_bytes = substrings[3];
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        enviar_proceso_a_interfaz(proceso_interfaz, "STDIN", hacer_io_stdin_read);
-        free(proceso_interfaz->interfaz);
-        free(proceso_interfaz->direcciones_bytes);
-        break;
-    case IO_STDOUT_WRITE:
-        proceso_interfaz->interfaz = malloc(string_length(substrings[1]));
-        proceso_interfaz->interfaz = substrings[1];
-        proceso_interfaz->cant_paginas = atoi(substrings[2]);
-        proceso_interfaz->direcciones_bytes = malloc(string_length(substrings[3]));
-        proceso_interfaz->direcciones_bytes = substrings[3];
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
-        free(proceso_interfaz->interfaz);
-        free(proceso_interfaz->direcciones_bytes);
-        break;
-    case IO_FS_CREATE:
-        char *interfaz_create = substrings[1];
-        char *nombre_archivo_create = substrings[2];
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        break;
-    case IO_FS_DELETE:
-        char *interfaz_delete = substrings[1];
-        char *nombre_archivo_delete = substrings[2];
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        break;
-    case IO_FS_TRUNCATE:
-        char *interfaz_truncate = substrings[1];
-        char *nombre_archivo_truncate = substrings[2];
-        uint32_t registro_tamanio_truncate = atoi(substrings[3]);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        break;
-    case IO_FS_WRITE:
-        char *interfaz_write = substrings[1];
-        char *nombre_archivo_write = substrings[2];
-        uint32_t registro_direccion_write = atoi(substrings[3]);
-        uint32_t registro_tamanio_write = atoi(substrings[4]);
-        // TODO: registro puntero archivo
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        break;
-    case IO_FS_READ:
-        char *interfaz_read = substrings[1];
-        char *nombre_archivo_read = substrings[2];
-        uint32_t registro_direccion_read = atoi(substrings[3]);
-        uint32_t registro_tamanio_read = atoi(substrings[4]);
-        // TODO: registro puntero archivo
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-        break;
-    case WAIT:
-        char *recurso_wait = substrings[1];
-        enviar_proceso_a_wait(proceso, recurso_wait, tiempo_en_cpu, timer);
-        break;
-    case SIGNAL:
-        char *recurso_signal = substrings[1];
-        enviar_proceso_a_signal(proceso, recurso_signal, tiempo_en_cpu, timer);
-        break;
-    case EXIT:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: SUCCESS", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-        entrar_a_exit(proceso);
-        break;
-    case TIMER:
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <READY>", proceso->pid);
-        proceso->quantum=  quantum;
-        pthread_mutex_unlock(&mutex_ready_list);
-        list_add(pcbs_ready, proceso);
-        mostrar_pids_ready(pcbs_ready, "READY");
-        pthread_mutex_unlock(&mutex_ready_list);
-        sem_post(&pcb_esperando_exec);
-        ingresar_a_exec();
-        break;
-    case RESIZE:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT OF MEMORY", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-        entrar_a_exit(proceso);
-        break;
-    case FINALIZAR_PROCESO:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO CONSOLA", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-        entrar_a_exit(proceso);
-        break;
-    case RECURSO_INVALIDO:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: RECURSO_INVALIDO", proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-        entrar_a_exit(proceso);
-    default:
+        default:
+
     }
-    if (string_contains(motivo_de_desalojo, " "))
-    {
+    if (string_contains(motivo_de_desalojo, " ")) {
         string_array_destroy(substrings);
     }
     free(motivo_de_desalojo);
+    
     free(proceso_interfaz);
 }
 
-void finalizar_proceso(proceso_t *proceso){
+void finalizar_proceso(proceso_t *proceso) {
     void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
     int offset = 0;
     agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
