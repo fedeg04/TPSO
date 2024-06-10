@@ -32,4 +32,5 @@ op_code string_to_opcode(char* string) {
     else if (strcmp(string, "DATOS_PCB") == 0) return DATOS_PCB;
     else if (strcmp(string, "MSG") == 0) return MSG;
     else if (strcmp(string, "TIMER") == 0) return TIMER;
+    else if (strcmp(string, "RECURSO_INVALIDO") == 0) return RECURSO_INVALIDO;
 }

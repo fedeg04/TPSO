@@ -7,7 +7,7 @@
 
 void enviar_proceso_io_gen_sleep(proceso_t* proceso,char* interfaz_sleep, uint32_t uni_de_trabajo);
 int estaConectada(char* interfaz);
-void desbloquear_proceso(proceso_t* proceso);
+void volver_a_ready(proceso_t* proceso);
 void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiempo_en_cpu, t_temporal* timer);
 int posicion_de_recurso(char* recurso);
 t_list* lista_de_recurso(char* recurso);

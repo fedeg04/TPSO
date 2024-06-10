@@ -80,4 +80,5 @@ void liberar_info_interfaces();
 int planificacion_activa;
 int reanudar_planificacion;
 proceso_t* proceso_a_verificar;
+int ejecuciones;
 #endif

@@ -103,17 +103,18 @@ void ejecutar_proceso(proceso_t *proceso, t_log *logger, int unQuantum)
     {
         log_info(logger, "Se envia el proceso <%d> a CPU", proceso->pid);
         enviar_proceso_a_cpu(proceso, logger);
-        esperar_llegada_de_proceso_fifo(proceso, logger);
-        esperar_contexto_de_ejecucion(proceso, logger, timer, 0);
+        esperar_llegada_de_proceso_fifo(proceso, logger, timer);
     }
     else if (!strcmp(algoritmo_planificacion, "RR") || !strcmp(algoritmo_planificacion, "VRR"))
     {
+        ejecuciones++;
         enviar_proceso_a_cpu(proceso, logger);
         pthread_t hilo_interrupcion;
         interrupcion_proceso_t *args_interrupcion = malloc(sizeof(interrupcion_proceso_t));
         args_interrupcion->proceso = proceso;
         args_interrupcion->timer = timer;
         args_interrupcion->logger = logger;
+        args_interrupcion->ejecucion = ejecuciones;
         pthread_create(&hilo_interrupcion, NULL, (void *)manejar_interrupcion_de_timer, (void *)args_interrupcion);
         esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger);
         pthread_detach(hilo_interrupcion);
@@ -147,12 +148,13 @@ void agregar_pcb(void *stream, int *offset, proceso_t *proceso)
     agregar_uint32_t(stream, offset, proceso->registros->DI);
 }
 
-void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger)
+void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t_temporal* timer)
 {
     uint32_t pid;
     uint32_t quantum;
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
     recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
+    esperar_contexto_de_ejecucion(proceso, logger, timer, 0);
 }
 
 bool es_el_proceso(proceso_t* proceso, proceso_t* proceso_a_encontrar) {
@@ -165,12 +167,15 @@ void manejar_interrupcion_de_timer(void *args_void)
     t_log *logger = args->logger;
     t_temporal *timer = args->timer;
     proceso_t *proceso = args->proceso;
+    int ejecucion = args->ejecucion;
     free(args);
     usleep(proceso->quantum * 1000);
+    /*
     bool _es_el_proceso(proceso_t* proceso_a_encontrar) {
         return es_el_proceso(proceso_a_encontrar, proceso);
     }
-    if (list_find(pcbs_exec, (void*)_es_el_proceso) == proceso)
+    */
+    if (ejecucion == ejecuciones)
     {
         temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);
@@ -182,10 +187,9 @@ void manejar_interrupcion_de_timer(void *args_void)
 
 void mandar_fin_de_quantum_de(proceso_t *proceso)
 {
-    void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
+    void *stream = malloc(sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, INTERRUMPIR);
-    agregar_uint32_t(stream, &offset, proceso->pid);
     send(cpu_interrupt_fd, stream, offset, 0);
     free(stream);
 }
@@ -385,10 +389,14 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         entrar_a_exit(proceso);
         break;
     case FINALIZAR_PROCESO:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO CONSOLA", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
         entrar_a_exit(proceso);
         break;
+    case RECURSO_INVALIDO:
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: RECURSO_INVALIDO", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+        entrar_a_exit(proceso);
     default:
     }
     if (string_contains(motivo_de_desalojo, " "))

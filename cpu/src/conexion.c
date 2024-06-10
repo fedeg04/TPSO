@@ -1,6 +1,6 @@
 #include <../include/conexion.h>
 
-uint32_t pid_interrumpido;
+bool pid_interrumpido;
 uint32_t pid_a_finalizar;
 
 void procesar_conexion_interrupt(void *args_void)
@@ -21,18 +21,10 @@ void procesar_conexion_interrupt(void *args_void)
         switch (opcode)
         {
         case INTERRUMPIR:
-            pid_interrumpido = recibir_interrupcion(socket_cliente);
+            pid_interrumpido = true;
             break;
         case FINALIZAR_PROCESO:
             pid_a_finalizar = recibir_interrupcion(socket_cliente);
-            break;
-        case PEDIDO_RECURSO:
-            flag_sigue_en_exec = 1;
-            sem_post(&fin_pedido_recursos);
-            break;  
-        case BLOQUEADO_RECURSO:
-            flag_sigue_en_exec = 0;
-            sem_post(&fin_pedido_recursos);
             break;
         default:
         }
@@ -81,12 +73,11 @@ void procesar_conexion_dispatch(void *args_void)
                         enviar_contexto(socket_cliente, pcb, "FINALIZAR_PROCESO");
                         break;
                     }
-                    if (hay_interrupcion(pcb->pid) && !es_proceso_a_finalizar(pcb->pid)) {
+                    if (pid_interrumpido) {
                         enviar_contexto(socket_cliente, pcb, "TIMER");
-                        pid_interrumpido = -1;
+                        pid_interrumpido = false;
                         break;
                     }
-                    pid_interrumpido = -1;
                 }
                 free(pcb->registros);
                 free(pcb);
@@ -181,21 +172,30 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
         case WAIT:
             enviar_contexto(socket, pcb, instruccion);
-            sem_wait(&fin_pedido_recursos);
-            if (flag_sigue_en_exec == 1)
-            {
+            op_code opcode;
+            recv(socket, &opcode, sizeof(op_code), MSG_WAITALL);
+            log_info(logger, "OPCODE: %d", opcode);
+            if(opcode == VUELTA_A_EXEC) {
                 return 1;
-            } else {
-                registros_cpu->PC++;
+            }
+            else if(opcode == BLOQUEADO_RECURSO) {
                 return 0;
             }
+            else if(opcode == RECURSO_INVALIDO) {
+                enviar_contexto(socket, pcb, "RECURSO_INVALIDO");
+                return 0;
+            }
+            return 0;
         case SIGNAL:
             enviar_contexto(socket, pcb, instruccion);
-            sem_wait(&fin_pedido_recursos);
-            if (flag_sigue_en_exec == 1) {
+            op_code opCode;
+            recv(socket, &opCode, sizeof(op_code), MSG_WAITALL);
+            log_info(logger, "OPCODE: %d", opcode);
+            if(opCode == VUELTA_A_EXEC){
                 return 1;
-            } else {
-                registros_cpu->PC++;
+            }
+            else if(opCode == RECURSO_INVALIDO){
+                enviar_contexto(socket, pcb, "RECURSO_INVALIDO");
                 return 0;
             }
         case IO_GEN_SLEEP:
