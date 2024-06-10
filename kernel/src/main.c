@@ -14,6 +14,7 @@ void inicializar_valores() {
     disminuciones_multiprogramacion = 0;
     planificacion_activa = 1;
     reanudar_planificacion = 0;
+    ejecuciones = 0;
 }
 
 void liberar_valores() {
