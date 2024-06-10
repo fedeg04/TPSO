@@ -33,9 +33,9 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
     if(!strcmp(comando, "EJECUTAR_SCRIPT"))
     {
         char* path_script = substrings[1];
-            if(existe_archivo(path_script)) {
-                ejecutar_script(path_script, logger, socket);
-            }
+        if(existe_archivo(path_script)) {
+            ejecutar_script(path_script, logger, socket);
+        }
     }
     else if(!strcmp(comando, "INICIAR_PROCESO")) {
         
@@ -53,40 +53,31 @@ void procesar_instruccion(char* instruccion, t_log* logger, int socket) {
             pthread_create(&hilo_proceso, NULL, (void*) planificar_nuevo_proceso, (void*) new_proceso);
             pthread_detach(hilo_proceso);
         }
-        }
-    else if(!strcmp(comando, "FINALIZAR_PROCESO"))
+    } else if(!strcmp(comando, "FINALIZAR_PROCESO"))
     {
         char* pid_proceso_recep = substrings[1];
         uint32_t pid_proceso = atoi(pid_proceso_recep);
         finalizar_proceso_de_pid(pid_proceso);
-    }
-    else if(!strcmp(comando, "DETENER_PLANIFICACION"))
+    } else if(!strcmp(comando, "DETENER_PLANIFICACION"))
     {
         pthread_mutex_lock(&mutex_planificacion_activa);
         planificacion_activa = 0;
         pthread_mutex_unlock(&mutex_planificacion_activa);
-    }
-    else if(!strcmp(comando, "INICIAR_PLANIFICACION"))
+    } else if(!strcmp(comando, "INICIAR_PLANIFICACION"))
     {
         pthread_mutex_lock(&mutex_planificacion_activa);
         if(planificacion_activa == 0) {
         planificacion_activa = 1;
         pthread_mutex_unlock(&mutex_planificacion_activa);
         iniciar_planificacion();
+        } else {
+            pthread_mutex_unlock(&mutex_planificacion_activa);
         }
-        else {
-        pthread_mutex_unlock(&mutex_planificacion_activa);
-        }
-    }
-    else if(!strcmp(comando, "MULTIPROGRAMACION"))
-    {
+    } else if(!strcmp(comando, "MULTIPROGRAMACION")) {
         char* nuevo_grado_multiprogramacion_recep = substrings[1];
         int nuevo_grado_multiprogramacion = atoi(nuevo_grado_multiprogramacion_recep);
         cambiar_grado_de_multiprogramacion(nuevo_grado_multiprogramacion);
-
-    }
-    else if(!strcmp(comando, "PROCESO_ESTADO"))
-    {
+    } else if(!strcmp(comando, "PROCESO_ESTADO")) {
 
     }
     string_array_destroy(substrings);
@@ -107,7 +98,7 @@ void enviar_inicio_proceso(int socket, char* path, t_log* logger) {
 
 void ejecutar_script(char* path, t_log* logger, int socket) {
     FILE *f = fopen(path, "r");
-    char* linea;
+    char* linea = NULL;
     size_t longitud = 0;
     ssize_t leidos;
     fseek(f, 0, SEEK_SET);
@@ -118,8 +109,8 @@ void ejecutar_script(char* path, t_log* logger, int socket) {
         }
         log_info(logger, "LINEA: %s", linea);
         procesar_instruccion(linea, logger, socket);
-        free(linea);
     }
+    free(linea);
     fclose(f);
 }
 

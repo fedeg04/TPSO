@@ -45,6 +45,9 @@ char* buscar_instruccion_en(FILE* f, uint32_t pc) {
         if (leidos == -1) { // Se alcanzó el final del archivo antes de llegar a la línea 'pc'
             return NULL;
         }
+        if(linea[0] == '\n') {
+            leidos = getline(&linea, &longitud, f);
+        }
     }
     // Cerrar el archivo y devolver la línea leída
     //fclose(f);

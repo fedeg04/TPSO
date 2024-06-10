@@ -5,6 +5,7 @@
 #include <commons/collections/list.h>
 #include <commons/bitarray.h>
 #include <commons/log.h>
+#include <pthread.h>
 
 typedef struct
 {
@@ -40,5 +41,6 @@ extern int tam_memoria;
 extern uint32_t tam_pagina;
 extern t_bitarray* bitarray_tabla;
 extern void* memoria;
+extern pthread_mutex_t mutex_memoria;
 
 #endif
