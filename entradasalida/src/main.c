@@ -187,15 +187,16 @@ void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* dire
     int offset_leido = 0;
     char* valor_a_enviar;
     for(int i = 0; i < cant_paginas * 2; i+=2) {
-        void* stream = malloc(sizeof(op_code) + 3 * sizeof(uint32_t) + string_length(leido));
+        direccion = atoi(substrings[i]); 
+        bytes = atoi(substrings[i+1]);
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + 2 * sizeof(uint16_t) + bytes);
         int offset = 0;
         agregar_opcode(stream, &offset, ESCRIBIR); // ESCRIBIR en vez de IO_STDIN_READ
         agregar_uint32_t(stream, &offset, proceso_pid);
-        direccion = atoi(substrings[i]); 
-        bytes = atoi(substrings[i+1]);
         agregar_uint16_t(stream, &offset, direccion);
-        valor_a_enviar = malloc(bytes);
+        valor_a_enviar = malloc(bytes + 1);
         memcpy(valor_a_enviar, leido + offset_leido, bytes);
+        valor_a_enviar[bytes] = '\0';
         agregar_string_sin_barra0(stream, &offset, valor_a_enviar);
         send(memoria_fd, stream, offset, 0);
         free(stream);

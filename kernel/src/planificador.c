@@ -174,12 +174,10 @@ void manejar_interrupcion_de_timer(void *args_void)
     int ejecucion = args->ejecucion;
     free(args);
     usleep(proceso->quantum * 1000);
-    /*
     bool _es_el_proceso(proceso_t* proceso_a_encontrar) {
         return es_el_proceso(proceso_a_encontrar, proceso);
     }
-    */
-    if (ejecucion == ejecuciones)
+    if (ejecucion == ejecuciones && list_find(pcbs_exec, (void*) _es_el_proceso))
     {
         temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);

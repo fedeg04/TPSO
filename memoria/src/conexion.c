@@ -73,6 +73,7 @@ void procesar_conexion(void* args_void) {
                 void* lectura = malloc(bytes_mov_in);
                 leer(lectura, dir_fis_mov_in, bytes_mov_in, logger, pid_mov_in);
                 enviar_lectura(socket_cliente, lectura, bytes_mov_in);
+                free(lectura);
                 break;
             case ESCRIBIR:
                 usleep(retardo_respuesta * 1000);
@@ -86,6 +87,7 @@ void procesar_conexion(void* args_void) {
                 recv(socket_cliente, valor_mov_out, bytes_mov_out, 0);
                 escribir(dir_fis_mov_out, valor_mov_out, bytes_mov_out, logger, pid_mov_out);
                 enviar_ok(socket_cliente);
+                free(valor_mov_out);
                 break;
             case RESIZE:
                 usleep(retardo_respuesta * 1000);

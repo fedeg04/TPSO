@@ -58,7 +58,6 @@ void hacer_io_gen_sleep()
 
 void volver_a_ready(proceso_t *proceso)
 {
-    log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <READY>", proceso->pid);
     if (proceso->quantum == quantum)
     {
         pthread_mutex_lock(&mutex_ready_list);
@@ -112,9 +111,11 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
             }
             temporal_destroy(timer);
             liberar_cpu();
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
             log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, recurso_wait);
             pedir_recurso(recurso_wait);
             verificar_detencion_de_planificacion();
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <READY>", proceso->pid);
             volver_a_ready(proceso);
         }
     }
