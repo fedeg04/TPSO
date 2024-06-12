@@ -42,5 +42,9 @@ extern uint32_t tam_pagina;
 extern t_bitarray* bitarray_tabla;
 extern void* memoria;
 extern pthread_mutex_t mutex_memoria;
+extern pthread_mutex_t mutex_paginas;
+extern pthread_mutex_t mutex_archivo_proceso;
+extern pthread_mutex_t mutex_bit_array;
+extern t_log* logger_memoria;
 
 #endif

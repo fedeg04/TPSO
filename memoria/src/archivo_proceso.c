@@ -32,7 +32,6 @@ archivo_proceso_t* archivo_proceso_por_pid(uint32_t pid, t_list* archivos_proces
     bool buscar_por_pid(archivo_proceso_t *archivo_proceso) {
         return (archivo_proceso->pid == pid);
     }
-
     return list_find(archivos_procesos, (void*)buscar_por_pid);
 } 
 
@@ -61,5 +60,6 @@ void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso) {
 
 void eliminar_archivo_proceso(t_list* archivos_procesos, uint32_t pid_a_finalizar){
     archivo_proceso_t* archivo_proceso = archivo_proceso_por_pid(pid_a_finalizar, archivos_procesos);
+    list_remove_element(archivos_procesos, archivo_proceso);
     archivo_proceso_destroy(archivo_proceso);
 }

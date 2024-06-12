@@ -12,16 +12,22 @@ void get_config(t_config* config) {
 void inicializar_semaforos()
 {
     pthread_mutex_init(&mutex_memoria, NULL);
+    pthread_mutex_init(&mutex_paginas, NULL);
+    pthread_mutex_init(&mutex_archivo_proceso, NULL);
+    pthread_mutex_init(&mutex_bit_array, NULL);
 }
 
 void liberar_semaforos()
 {
     pthread_mutex_destroy(&mutex_memoria);
+    pthread_mutex_destroy(&mutex_paginas);
+    pthread_mutex_destroy(&mutex_archivo_proceso);
+    pthread_mutex_destroy(&mutex_bit_array);
 }
 
 int main(int argc, char* argv[]) {
 
-    t_log* logger_memoria = iniciar_logger("memoria.log", "MEMORIA: ");
+    logger_memoria = iniciar_logger("memoria.log", "MEMORIA: ");
     t_config* config_memoria = iniciar_config("memoria.config");
     get_config(config_memoria);
 

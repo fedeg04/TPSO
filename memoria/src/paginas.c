@@ -44,9 +44,9 @@ int tamanio_proceso(uint32_t pid)
 
 tabla_t *tabla_paginas_por_pid(uint32_t pid)
 {
-    bool buscar_pagina(tabla_t *tabla)
+    bool buscar_pagina(tabla_t *tabla_b)
     {
-        return (tabla->pid == pid);  
+        return (tabla_b->pid == pid);
     }
     return list_find(tablas_paginas_memoria, (void *)buscar_pagina);
 }
@@ -62,12 +62,16 @@ bool ampliar_tamanio_proceso(uint32_t pid, int tamanio)
 
     for (int i = 0; (i < cantidad_marcos()) && cant_marcos_otorgar; i++)
     {
+        pthread_mutex_lock(&mutex_bit_array);
         if (!bitarray_test_bit(bitarray_tabla, i))
         {
+            pthread_mutex_unlock(&mutex_bit_array);
             pagina_t *pagina = list_get(tabla_proceso->paginas, i);
             tabla_proceso->cantidad_paginas++;
             pagina->nro_pagina = tabla_proceso->cantidad_paginas - 1;
+            pthread_mutex_lock(&mutex_bit_array);
             bitarray_set_bit(bitarray_tabla, i);
+            pthread_mutex_unlock(&mutex_bit_array);
             if (cant_marcos_otorgar == 1)
             {
                 pagina->bytes_ocupados = tamanio_restante;
@@ -78,6 +82,8 @@ bool ampliar_tamanio_proceso(uint32_t pid, int tamanio)
             }
             cant_marcos_otorgar--;
             tamanio_restante -= tam_pagina;
+        } else {
+            pthread_mutex_unlock(&mutex_bit_array);
         }
     }
     return cant_marcos_otorgar;
@@ -91,7 +97,9 @@ int completar_ultima_pagina(tabla_t *tabla, int tamanio)
     }
     pagina_t *pagina = buscar_pagina_por_nro(tabla, tabla->cantidad_paginas - 1);
     int espacio_restante = tam_pagina - pagina->bytes_ocupados;
+    pthread_mutex_lock(&mutex_bit_array);
     bitarray_set_bit(bitarray_tabla, pagina->marco);
+    pthread_mutex_unlock(&mutex_bit_array);
     if (tamanio <= espacio_restante)
     {
         pagina->bytes_ocupados += tamanio;
@@ -129,7 +137,9 @@ void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log *logger)
                 pagina->bytes_ocupados = 0;
                 pagina->nro_pagina = -1;
                 tabla_proceso->cantidad_paginas--;
+                pthread_mutex_lock(&mutex_bit_array);
                 bitarray_clean_bit(bitarray_tabla, i);
+                pthread_mutex_unlock(&mutex_bit_array);
             }
             else
             {
@@ -158,7 +168,9 @@ int vaciar_ultima_pagina(tabla_t *tabla, int tamanio)
         pagina->bytes_ocupados = 0;
         pagina->nro_pagina = -1;
         tabla->cantidad_paginas--;
+        pthread_mutex_lock(&mutex_bit_array);
         bitarray_clean_bit(bitarray_tabla, pagina->marco);
+        pthread_mutex_unlock(&mutex_bit_array);
         return restante;
     }
     else
@@ -172,6 +184,7 @@ void eliminar_tabla(uint32_t pid)
 {
     tabla_t *tabla = tabla_paginas_por_pid(pid);
     list_destroy_and_destroy_elements(tabla->paginas, (void *)pagina_destroy);
+    list_remove_element(tablas_paginas_memoria, tabla);
     free(tabla);
 }
 

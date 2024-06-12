@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <commons/collections/list.h>
+#include <pthread.h>
 
 typedef struct {
     char* path;
@@ -18,5 +19,6 @@ void archivo_proceso_destroy(archivo_proceso_t* archivo_proceso);
 archivo_proceso_t* archivo_proceso_por_pid(uint32_t pid, t_list* archivos_procesos);
 void eliminar_archivo_proceso(t_list* archivos_procesos, uint32_t pid_a_finalizar);
 extern int retardo_respuesta;
+extern pthread_mutex_t mutex_archivo_proceso;
 
 #endif
