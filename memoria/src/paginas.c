@@ -121,7 +121,7 @@ pagina_t *buscar_pagina_por_nro(tabla_t *tabla, int nro_pagina)
     return list_find(tabla->paginas, (void *)pagina_por_nro);
 }
 
-void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log *logger)
+void reducir_tamanio_proceso(uint32_t pid, int tamanio)
 {
     tabla_t *tabla_proceso = tabla_paginas_por_pid(pid);
     pagina_t* primera_pagina = list_get(tabla_proceso->paginas, 0); 

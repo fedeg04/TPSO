@@ -35,10 +35,6 @@ void procesar_conexion(void* args_void) {
                     agregar_proceso(archivos_procesos, path, pid);
                     int cant_marcos = cantidad_marcos();
                     tabla_t* tabla_paginas = iniciar_tabla(pid, cant_marcos);
-                    log_info(logger, "Tamaño de int: %d", sizeof(int));
-                    log_info(logger, "Tamaño de list: %d", sizeof(t_list*));
-                    log_info(logger, "Tamaño de uint: %d", sizeof(uint32_t));
-                    log_info(logger, "Tamaño de tabla: %d", sizeof(tabla_t));
                     log_info(logger, "PID: <%d> - Tamaño: <0>", pid);
                     list_add(tablas_paginas_memoria, tabla_paginas);
                 } else {
@@ -54,9 +50,9 @@ void procesar_conexion(void* args_void) {
                 pthread_mutex_lock(&mutex_paginas);
                 uint32_t pid_a_finalizar; 
                 recv(socket_cliente, &pid_a_finalizar, sizeof(uint32_t), 0);
-                log_info(logger, "PID: <%d> - Tamaño: <%d>", pid_a_finalizar, cantidad_paginas_proceso(pid_a_finalizar, logger));
-                reducir_tamanio_proceso(pid_a_finalizar, tamanio_proceso(pid_a_finalizar), logger);
-                eliminar_tabla(pid_a_finalizar, logger);
+                log_info(logger, "PID: <%d> - Tamaño: <%d>", pid_a_finalizar, cantidad_paginas_proceso(pid_a_finalizar));
+                reducir_tamanio_proceso(pid_a_finalizar, tamanio_proceso(pid_a_finalizar));
+                eliminar_tabla(pid_a_finalizar);
                 eliminar_archivo_proceso(archivos_procesos, pid_a_finalizar);
                 pthread_mutex_unlock(&mutex_archivo_proceso);
                 pthread_mutex_unlock(&mutex_paginas);
@@ -119,7 +115,7 @@ void procesar_conexion(void* args_void) {
                     response = ampliar_tamanio_proceso(pid_resize, tamanio-tam_proceso);
                 } else {
                     log_info(logger, "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Reducir: <%d>", pid_resize, tam_proceso, tam_proceso - tamanio);
-                    reducir_tamanio_proceso(pid_resize, tam_proceso - tamanio, logger);
+                    reducir_tamanio_proceso(pid_resize, tam_proceso - tamanio);
                 }
                 if(response) {
                     enviar_out_of_memory(socket_cliente);
