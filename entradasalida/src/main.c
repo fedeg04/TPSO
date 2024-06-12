@@ -3,16 +3,30 @@
 #include <../include/init.h>
 #include <../include/main.h>
 
-void get_config(t_config* config) {
+void get_config(t_config* config)
+ {
     tipo_interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
+    puerto_kernel = config_get_string_value(config, "PUERTO_KERNEL");
+    ip_kernel = config_get_string_value(config, "IP_KERNEL"); 
+    if(!strcmp(tipo_interfaz, "GENERICA"))
+    {
+        tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");    
+    }
+    if(!strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT"))
+    {
+        puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
+        ip_memoria = config_get_string_value(config, "IP_MEMORIA");
+    }
+    if(!strcmp(tipo_interfaz, "DIALFS"))
+    {
     tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
     puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
     ip_memoria = config_get_string_value(config, "IP_MEMORIA");
-    puerto_kernel = config_get_string_value(config, "PUERTO_KERNEL");
-    ip_kernel = config_get_string_value(config, "IP_KERNEL");
     path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
     block_size = config_get_int_value(config, "BLOCK_SIZE");
     block_count = config_get_int_value(config, "BLOCK_COUNT");
+    retraso_compactacion= config_get_int_value(config, "RETRASO_COMPACTACION");
+    }
 }
 
 int main(int argc, char* argv[]) {
