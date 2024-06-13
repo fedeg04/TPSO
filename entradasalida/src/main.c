@@ -12,12 +12,12 @@ void get_config(t_config* config)
     {
         tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");    
     }
-    if(!strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT"))
+    else if(!strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT"))
     {
         puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
         ip_memoria = config_get_string_value(config, "IP_MEMORIA");
     }
-    if(!strcmp(tipo_interfaz, "DIALFS"))
+    else if(!strcmp(tipo_interfaz, "DIALFS"))
     {
     tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
     puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");

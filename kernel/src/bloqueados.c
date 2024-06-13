@@ -80,6 +80,7 @@ void volver_a_ready(proceso_t *proceso)
 
 void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiempo_en_cpu, t_temporal *timer)
 {
+    uint32_t pid_proceso = proceso->pid;
     if (existe_recurso(recurso_wait))
     {
         pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
@@ -87,8 +88,10 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
         pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
         if (hay_recursos_de(recurso_wait))
         {
-            pedir_recurso(recurso_wait);
-            volver_a_exec(proceso, tiempo_en_cpu, timer);
+            pedir_recurso(recurso_wait,proceso, pid_proceso);
+            if(proceso->pid == pid_proceso){
+                volver_a_exec(proceso, tiempo_en_cpu, timer);
+            }
         }
         else
         {
@@ -113,10 +116,13 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
             liberar_cpu();
             log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
             log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, recurso_wait);
-            pedir_recurso(recurso_wait);
+            pedir_recurso(recurso_wait, proceso, pid_proceso);
+            if(proceso->pid == pid_proceso)
+            {
             verificar_detencion_de_planificacion();
             log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <READY>", proceso->pid);
             volver_a_ready(proceso);
+            }
         }
     }
     else
@@ -172,17 +178,24 @@ bool existe_recurso(char *recurso)
     }
     return false;
 }
-void pedir_recurso(char *recurso_wait)
+void pedir_recurso(char *recurso_wait, proceso_t* proceso, uint32_t pid_proceso)
 {
     int indice = posicion_de_recurso(recurso_wait);
+    int pid_ingresado = proceso->pid;
     sem_wait(&pcb_esperando_recurso[indice]);
     pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-    proceso_t *proceso = list_remove(lista_de_recurso(recurso_wait), 0);
-    pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-    pthread_mutex_lock(&mutex_recursos_instancias[indice]);
-    instancias_recursos[indice]--;
-    pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
-    proceso->recursos[indice]++;
+    if(proceso->pid == pid_proceso)
+    {
+        list_remove_element(lista_de_recurso(recurso_wait), proceso);
+        pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+        pthread_mutex_lock(&mutex_recursos_instancias[indice]);
+        instancias_recursos[indice]--;
+        pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
+        proceso->recursos[indice]++;
+    }
+    else{
+        pthread_mutex_lock(&mutex_recursos_instancias[indice]);      
+    }
 }
 
 void enviar_proceso_a_signal(proceso_t *proceso, char *recurso_signal, uint32_t tiempo_en_cpu, t_temporal *timer)

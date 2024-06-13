@@ -441,15 +441,17 @@ void finalizar_proceso_de_pid(uint32_t pid_proceso)
     buscar_en_cola_y_finalizar_proceso(pcbs_ready, mutex_ready_list);
     buscar_en_cola_y_finalizar_proceso(pcbs_ready_prioritarios, mutex_ready_prioritario_list);
     int indice = 0;
-    while (list_get(interfaces, indice) != NULL)
+    while (indice < list_size(interfaces))
     {
         interfaz_t *interfaz = list_get(interfaces, indice);
-        buscar_en_cola_de_bloqueados_y_finalizar_proceso(&interfaz->cola, &interfaz->mutex_cola, &interfaz->fin_de_proceso, &interfaz->sem_eliminar_proceso, &interfaz->mutex_fin_de_proceso);
+        buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz);
+        indice++;
     }
     buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso();
+    buscar_en_exec_y_finalizar_proceso();
 }
 
-bool tiene_el_pid(proceso_t *proceso)
+bool tiene_el_pid(proceso_t* proceso)
 {
     return pid_a_finalizar == proceso->pid;
 }
@@ -461,9 +463,15 @@ void buscar_en_cola_y_finalizar_proceso(t_list *cola, pthread_mutex_t mutex)
     pthread_mutex_unlock(&mutex);
     if (proceso != NULL)
     {
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
         if (cola == pcbs_ready || cola == pcbs_ready_prioritarios)
         {
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXIT>", proceso->pid);
             verificar_multiprogramacion();
+        }
+        else 
+        {
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <EXIT>", proceso->pid);
         }
         desalojar_recursos(proceso);
         ingresar_a_exit(proceso);
@@ -471,30 +479,37 @@ void buscar_en_cola_y_finalizar_proceso(t_list *cola, pthread_mutex_t mutex)
     }
 }
 
-void buscar_en_cola_de_bloqueados_y_finalizar_proceso(t_list *cola, pthread_mutex_t *mutex_lista, int *flag, sem_t *sem_eliminar, pthread_mutex_t *mutex_flag)
+void buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz_t* interfaz)
 {
     proceso_t *proceso_a_eliminar;
-    pthread_mutex_lock(mutex_lista);
-    if (tiene_el_pid(list_get(cola, 0)))
+    pthread_mutex_lock(&interfaz->mutex_cola);
+
+    if (list_find(interfaz->cola, (void*) tiene_el_pid) != NULL)
     {
-        pthread_mutex_lock(mutex_flag);
-        *flag = 1;
-        pthread_mutex_unlock(mutex_flag);
-        sem_wait(sem_eliminar);
-        pthread_mutex_lock(mutex_flag);
-        *flag = 0;
-        pthread_mutex_unlock(mutex_flag);
-        proceso_a_eliminar = list_remove(cola, 0);
+        proceso_a_eliminar = list_find(interfaz->cola, (void*) tiene_el_pid);
+        pthread_mutex_unlock(&interfaz->mutex_cola);
+        pthread_mutex_lock(&interfaz->mutex_fin_de_proceso);
+        interfaz->fin_de_proceso = 1;
+        pthread_mutex_unlock(&interfaz->mutex_fin_de_proceso);
+        sem_wait(&interfaz->sem_eliminar_proceso);
+        pthread_mutex_lock(&interfaz->mutex_fin_de_proceso);
+        interfaz->fin_de_proceso = 0;
+        pthread_mutex_unlock(&interfaz->mutex_fin_de_proceso);
+        pthread_mutex_lock(&interfaz->mutex_cola);
+        proceso_a_eliminar = list_remove(interfaz->cola, 0);
+        pthread_mutex_unlock(&interfaz->mutex_cola);
     }
     else
     {
-        proceso_a_eliminar = list_remove_by_condition(cola, (void *)tiene_el_pid);
-        pthread_mutex_unlock(mutex_lista);
+        proceso_a_eliminar = list_remove_by_condition(interfaz->cola, (void *)tiene_el_pid);
+        pthread_mutex_unlock(&interfaz->mutex_cola);
+    }
         if (proceso_a_eliminar != NULL)
         {
+            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso_a_eliminar->pid);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_eliminar->pid);
             entrar_a_exit(proceso_a_eliminar);
         }
-    }
 }
 
 void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
@@ -503,11 +518,19 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
     {
         pthread_mutex_lock(&mutex_recursos_list[i]);
         pthread_mutex_lock(&mutex_exec_list);
+        log_info(logger_kernel, "Llegué");
         if (list_find(pcbs_recursos[i], (void *)tiene_el_pid) != NULL && list_find(pcbs_exec, (void *)tiene_el_pid) == NULL)
         {
-            list_remove_by_condition(pcbs_recursos[i], (void *)tiene_el_pid);
-            pthread_mutex_unlock(&mutex_exec_list);
+            log_info(logger_kernel, "Entré");
+            proceso_t* proceso = list_remove_by_condition(pcbs_recursos[i], (void *)tiene_el_pid);
+           pthread_mutex_unlock(&mutex_exec_list);
             pthread_mutex_unlock(&mutex_recursos_list[i]);
+            if(proceso != NULL)
+            {
+                log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+                log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+                entrar_a_exit(proceso);
+            }
         }
         else
         {
@@ -520,8 +543,8 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
 void buscar_en_exec_y_finalizar_proceso()
 {
     pthread_mutex_lock(&mutex_exec_list);
-    proceso_t *proceso_en_exec = list_get(pcbs_exec, 0);
-    if (tiene_el_pid(proceso_en_exec))
+    proceso_t* proceso_en_exec;
+    if (list_find(pcbs_exec, (void*)tiene_el_pid))
     {
         void *stream = malloc(sizeof(op_code));
         int offset = 0;
@@ -577,6 +600,9 @@ void desalojar_recursos(proceso_t *proceso)
 {
     for (int i = 0; i < cantidad_recursos; i++)
     {
+        if(list_find(pcbs_recursos[i], (void*) tiene_el_pid)) {
+            list_remove_element(pcbs_recursos[i],proceso);
+        }
         for (int j = proceso->recursos[i]; j > 0; j--)
         {
             pthread_mutex_lock(&mutex_recursos_instancias[i]);

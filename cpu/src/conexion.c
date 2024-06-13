@@ -146,7 +146,6 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             return 1;
         case SUB:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
-            log_info(logger, "1: %d, 2: %d", primer_valor, segundo_valor);
             set_registros(primer_parametro, primer_valor - segundo_valor);
             return 1;
         case JNZ:
@@ -163,7 +162,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
         case COPY_STRING:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s>", pcb->pid, comando, primer_parametro);
             uint8_t cant_pags_leer = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("SI"));
-            char* leido = malloc(1);
+            char* leido = malloc(atoi(primer_parametro) + 1);
             leido[0] = '\0';
             leer_string(leido, cant_pags_leer, desplazamiento_direccion_logica(get_valor_registro("SI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("SI")), logger);
             leido[atoi(primer_parametro)] = '\0';
@@ -525,7 +524,7 @@ bool respuesta_memoria(proceso_t* pcb, int socket_cliente) {
     op_code mov_out_response;
     recv(memoria_fd, &mov_out_response, sizeof(op_code), 0);
     if(mov_out_response != MSG) {
-        enviar_contexto(socket_cliente, pcb, OUTOFMEMORY);
+        enviar_contexto(socket_cliente, pcb, "OUTOFMEMORY");
         return 0;
     }   
     return 1;
@@ -626,6 +625,7 @@ void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, 
 void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {
     uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
     uint16_t bytes_utilizados = 0;
+    char* buffer = lectura;
     for (int i = 0; i < cant_pags; i++)
     {
         if(bytes_restantes > tamanio_pagina) {
@@ -650,22 +650,22 @@ void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint
 
         uint16_t cant_bytes_leer;
         recv(memoria_fd, &cant_bytes_leer, sizeof(uint16_t), 0);
-        char* lectura_parcial = malloc(cant_bytes_leer + 1);
-        recv(memoria_fd, lectura_parcial, cant_bytes_leer, 0);
-        lectura_parcial[cant_bytes_leer] = '\0';
-        string_append(&lectura, lectura_parcial);
-        free(lectura_parcial);
+        recv(memoria_fd, buffer, cant_bytes_leer, 0);
+        buffer += cant_bytes_leer;
     }
+    *buffer = '\0';
 }
 
 bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {
     uint16_t bytes_restantes = tamanio_pagina - desplazamiento;
     uint8_t bytes_utilizados = 0;
+    char* valor_a_enviar;
+    int offset_leido = 0;
     for (int i = 0; i < cant_pags; i++)
     {
         uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
         uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
-        void* stream = malloc(sizeof(op_code) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint16_t) * 2);
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t) * 2);
         int offset = 0;
         agregar_opcode(stream, &offset, ESCRIBIR);
         agregar_uint32_t(stream, &offset, pid);
@@ -678,7 +678,11 @@ bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, 
             bytes_restantes = cant_bytes;
         }
         stream = realloc(stream, offset + bytes_restantes);
-        agregar_string_sin_barra0(stream, &offset, mensaje);
+        valor_a_enviar = malloc(bytes_restantes + 1);
+        memcpy(valor_a_enviar, mensaje + offset_leido, bytes_restantes);
+        valor_a_enviar[bytes_restantes] = '\0';
+        agregar_string_sin_barra0(stream, &offset, valor_a_enviar);
+        offset_leido+= bytes_restantes;
         bytes_utilizados += bytes_restantes;
         bytes_restantes = cant_bytes - bytes_utilizados;
         desplazamiento = 0;

@@ -36,7 +36,7 @@ void finalizar_proceso_de_pid(uint32_t pid_proceso);
 bool tiene_el_pid(proceso_t* proceso);
 void buscar_en_cola_y_finalizar_proceso(t_list* cola, pthread_mutex_t mutex); 
 void mandar_fin_de_quantum_de(proceso_t *proceso);
-void buscar_en_cola_de_bloqueados_y_finalizar_proceso(t_list* cola, pthread_mutex_t* mutex_lista, int* flag, sem_t* sem_eliminar, pthread_mutex_t* mutex_flag);
+void buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz_t* interfaz);
 void buscar_en_exec_y_finalizar_proceso();
 void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion);
 void entrar_a_exit(proceso_t* proceso);

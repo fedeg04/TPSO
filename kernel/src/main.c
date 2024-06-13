@@ -71,8 +71,6 @@ int main(int argc, char *argv[])
 
     pthread_join(hilo_consola, NULL);
     liberar_valores();
-    liberar_listas();
-    liberar_semaforos();
     terminar_programa(logger_kernel, config_kernel);
     liberar_conexion(memoria_dispatch_fd);
     liberar_conexion(memoria_interrupt_fd);
