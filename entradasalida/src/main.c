@@ -42,7 +42,10 @@ int main(int argc, char* argv[]) {
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
 
     //Se conecta a la memoria
-    memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
+    if(!strcmp(tipo_interfaz, "DIALFS") || !strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT")) 
+    {
+        memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
+    }
 
     conectar_a_kernel(nombre);
     atender_pedidos_kernel();

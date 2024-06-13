@@ -413,6 +413,7 @@ void finalizar_proceso(proceso_t *proceso)
     free(proceso->recursos);
     free(proceso->registros);
     free(proceso);
+    proceso = NULL;
 }
 
 void ingresar_a_exit(proceso_t *proceso)
