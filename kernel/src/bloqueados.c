@@ -80,6 +80,10 @@ void volver_a_ready(proceso_t *proceso)
 
 void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiempo_en_cpu, t_temporal *timer)
 {
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pid == pid_proceso;
+    }
     if (existe_recurso(recurso_wait))
     {
         pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
@@ -87,8 +91,9 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
         pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
         if (hay_recursos_de(recurso_wait))
         {
-            pedir_recurso(recurso_wait,proceso);
-            if(proceso != NULL){
+            pedir_recurso(recurso_wait,proceso, pid_proceso);
+            if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+            {
                 volver_a_exec(proceso, tiempo_en_cpu, timer);
             }
         }
@@ -115,8 +120,8 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
             liberar_cpu();
             log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
             log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, recurso_wait);
-            pedir_recurso(recurso_wait, proceso);
-            if(proceso != NULL)
+            pedir_recurso(recurso_wait, proceso, pid_proceso);
+            if(!list_any_satisfy(pids_eliminados, _pids_iguales))
             {
             verificar_detencion_de_planificacion();
             log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <READY>", proceso->pid);
@@ -177,13 +182,23 @@ bool existe_recurso(char *recurso)
     }
     return false;
 }
-void pedir_recurso(char *recurso_wait, proceso_t* proceso)
+
+bool pids_iguales(uint32_t pid1, uint32_t pid2) 
 {
+    return pid1 == pid2;
+}
+
+void pedir_recurso(char *recurso_wait, proceso_t* proceso, uint32_t pid_proceso)
+{
+    bool _pids_iguales(uint32_t pid) {
+        return pid == pid_proceso;
+    }
+
     int indice = posicion_de_recurso(recurso_wait);
     int pid_ingresado = proceso->pid;
     sem_wait(&pcb_esperando_recurso[indice]);
     pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-    if(proceso != NULL)
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
     {
         list_remove_element(lista_de_recurso(recurso_wait), proceso);
         pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
@@ -194,7 +209,8 @@ void pedir_recurso(char *recurso_wait, proceso_t* proceso)
         
     }
     else{
-        pthread_mutex_lock(&mutex_recursos_instancias[indice]);   
+        pthread_mutex_unlock(&mutex_recursos_instancias[indice]); 
+        sem_post(&pcb_esperando_recurso[indice]);  
     }
 }
 

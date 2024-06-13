@@ -81,4 +81,5 @@ int planificacion_activa;
 int reanudar_planificacion;
 proceso_t* proceso_a_verificar;
 int ejecuciones;
+t_list* pids_eliminados;
 #endif

@@ -198,10 +198,10 @@ void mandar_fin_de_quantum_de(proceso_t *proceso)
 void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_log *logger)
 {
     uint32_t pid;
-    uint32_t quantum;
+    uint32_t pquantum;
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
     uint32_t tiempo_en_cpu = (uint32_t)temporal_gettime(timer);
-    recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
+    recv(cpu_dispatch_fd, &pquantum, sizeof(uint32_t), 0);
     if (!strcmp(algoritmo_planificacion, "VRR"))
     {
         if (tiempo_en_cpu < proceso->quantum)
@@ -409,6 +409,7 @@ void finalizar_proceso(proceso_t *proceso)
     agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
     agregar_uint32_t(stream, &offset, proceso->pid);
     send(memoria_interrupt_fd, stream, offset, 0);
+    list_add(pids_eliminados, proceso->pid);
     free(stream);
     free(proceso->recursos);
     free(proceso->registros);
@@ -518,11 +519,9 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
     for (int i = 0; i < cantidad_recursos; i++)
     {
         pthread_mutex_lock(&mutex_recursos_list[i]);
-        pthread_mutex_lock(&mutex_exec_list);
-        log_info(logger_kernel, "Llegué");
+        //pthread_mutex_lock(&mutex_exec_list);
         if (list_find(pcbs_recursos[i], (void *)tiene_el_pid) != NULL && list_find(pcbs_exec, (void *)tiene_el_pid) == NULL)
         {
-            log_info(logger_kernel, "Entré");
             proceso_t* proceso = list_remove_by_condition(pcbs_recursos[i], (void *)tiene_el_pid);
            pthread_mutex_unlock(&mutex_exec_list);
             pthread_mutex_unlock(&mutex_recursos_list[i]);
@@ -535,7 +534,7 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
         }
         else
         {
-            pthread_mutex_unlock(&mutex_exec_list);
+            //pthread_mutex_unlock(&mutex_exec_list);
             pthread_mutex_unlock(&mutex_recursos_list[i]);
         }
     }
@@ -544,14 +543,14 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
 void buscar_en_exec_y_finalizar_proceso()
 {
     //pthread_mutex_lock(&mutex_exec_list);
-    proceso_t* proceso_en_exec;
-    if (list_find(pcbs_exec, (void*)tiene_el_pid))
+    if (list_any_satisfy(pcbs_exec, (void*)tiene_el_pid))
     {
-        void *stream = malloc(sizeof(op_code));
+        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
         int offset = 0;
         agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
-        agregar_uint32_t(stream, &offset, proceso_en_exec->pid);
+        agregar_uint32_t(stream, &offset, pid_a_finalizar);
         send(cpu_interrupt_fd, stream, offset, 0);
+        free(stream);
     }
     //pthread_mutex_unlock(&mutex_exec_list);
 }

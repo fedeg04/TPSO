@@ -17,6 +17,7 @@ void inicializar_listas()
     {
         pcbs_recursos[i] = list_create();
     }
+    pids_eliminados = list_create();
 }
 
 void liberar_listas()
@@ -36,6 +37,7 @@ void liberar_listas()
         list_destroy(pcbs_recursos[i]);
     }
     free(pcbs_recursos);
+    list_destroy(pids_eliminados);
 }
 void get_config(t_config *config)
 {
