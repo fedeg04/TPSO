@@ -22,9 +22,7 @@ void procesar_conexion(void* args_void) {
                 free(stream);
                 break;
             case INICIAR_PROCESO:
-                usleep(retardo_respuesta * 1000);
-                pthread_mutex_lock(&mutex_archivo_proceso);
-                pthread_mutex_lock(&mutex_paginas);
+                usleep(retardo_respuesta * 1000);                
                 uint32_t size;
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
                 char* path = malloc(size);
@@ -32,45 +30,47 @@ void procesar_conexion(void* args_void) {
                 uint32_t pid;
                 recv(socket_cliente, &pid, sizeof(uint32_t), 0);
                 if(existe_archivo(path)) {
+                    pthread_mutex_lock(&mutex_archivo_proceso);
                     agregar_proceso(archivos_procesos, path, pid);
+                    pthread_mutex_unlock(&mutex_archivo_proceso);
                     int cant_marcos = cantidad_marcos();
                     tabla_t* tabla_paginas = iniciar_tabla(pid, cant_marcos);
                     log_info(logger, "PID: <%d> - Tamaño: <0>", pid);
+                    pthread_mutex_lock(&mutex_paginas);
                     list_add(tablas_paginas_memoria, tabla_paginas);
+                    pthread_mutex_unlock(&mutex_paginas);
                 } else {
                     pid = 0;
                 }
-                pthread_mutex_unlock(&mutex_archivo_proceso);
-                pthread_mutex_unlock(&mutex_paginas);
                 enviar_pid(socket_cliente, pid);
                 break;
             case FINALIZAR_PROCESO:
                 usleep(retardo_respuesta * 1000);
-                pthread_mutex_lock(&mutex_archivo_proceso);
-                pthread_mutex_lock(&mutex_paginas);
                 uint32_t pid_a_finalizar; 
                 recv(socket_cliente, &pid_a_finalizar, sizeof(uint32_t), 0);
+                pthread_mutex_lock(&mutex_paginas);
                 log_info(logger, "PID: <%d> - Tamaño: <%d>", pid_a_finalizar, cantidad_paginas_proceso(pid_a_finalizar));
                 reducir_tamanio_proceso(pid_a_finalizar, tamanio_proceso(pid_a_finalizar));
                 eliminar_tabla(pid_a_finalizar);
+                pthread_mutex_unlock(&mutex_paginas);
+                pthread_mutex_lock(&mutex_archivo_proceso);
                 eliminar_archivo_proceso(archivos_procesos, pid_a_finalizar);
                 pthread_mutex_unlock(&mutex_archivo_proceso);
-                pthread_mutex_unlock(&mutex_paginas);
                 break;
             case FETCH:
                 usleep(retardo_respuesta * 1000);
-                pthread_mutex_lock(&mutex_archivo_proceso);
                 uint32_t pid_a_buscar;
                 recv(socket_cliente, &pid_a_buscar, sizeof(uint32_t), 0);
                 uint32_t pc;
                 recv(socket_cliente, &pc, sizeof(uint32_t), 0);
+                pthread_mutex_lock(&mutex_archivo_proceso);
                 char* instruccion = buscar_instruccion(pid_a_buscar, pc, archivos_procesos);
+                pthread_mutex_unlock(&mutex_archivo_proceso);
                 if(instruccion[strlen(instruccion) - 1] == '\n') {
                     instruccion[strlen(instruccion) - 1] = '\0';
                 }
                 enviar_instruccion(socket_cliente, instruccion);
                 free(instruccion);
-                pthread_mutex_unlock(&mutex_archivo_proceso);
                 break;
             case LEER:
                 usleep(retardo_respuesta * 1000);
@@ -101,37 +101,39 @@ void procesar_conexion(void* args_void) {
                 break;
             case RESIZE:
                 usleep(retardo_respuesta * 1000);
-                pthread_mutex_lock(&mutex_paginas);
                 uint32_t tamanio;
                 recv(socket_cliente, &tamanio, sizeof(uint32_t), 0);
                 uint32_t pid_resize;
                 recv(socket_cliente, &pid_resize, sizeof(uint32_t), 0);
                 log_info(logger, "Pid invalid: %d\n ", pid_resize);
+                pthread_mutex_lock(&mutex_paginas);
                 int tam_proceso = tamanio_proceso(pid_resize);
                 log_info(logger, "Tamanio: %d\n ", tam_proceso);
                 int response = 0;
                 if(tamanio >= tam_proceso) {
                     log_info(logger, "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Ampliar: <%d>", pid_resize, tam_proceso, tamanio - tam_proceso);
                     response = ampliar_tamanio_proceso(pid_resize, tamanio-tam_proceso);
+                    pthread_mutex_unlock(&mutex_paginas);
                 } else {
                     log_info(logger, "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Reducir: <%d>", pid_resize, tam_proceso, tam_proceso - tamanio);
                     reducir_tamanio_proceso(pid_resize, tam_proceso - tamanio);
+                    pthread_mutex_unlock(&mutex_paginas);
                 }
                 if(response) {
                     enviar_out_of_memory(socket_cliente);
                 } else {
                     enviar_ok(socket_cliente);
                 }
-                pthread_mutex_unlock(&mutex_paginas);
                 break;
             case PEDIR_MARCO:
                 usleep(retardo_respuesta * 1000);
-                pthread_mutex_lock(&mutex_paginas);
                 uint32_t pid_marco;
                 uint32_t nro_pagina;
                 recv(socket_cliente, &pid_marco, sizeof(uint32_t), 0);
                 recv(socket_cliente, &nro_pagina, sizeof(uint32_t), 0);
+                pthread_mutex_lock(&mutex_paginas);
                 tabla_t* tabla = tabla_paginas_por_pid(pid_marco);
+                pthread_mutex_unlock(&mutex_paginas);
                 pagina_t* pagina = buscar_pagina_por_nro(tabla, (int)nro_pagina);
                 log_info(logger, "PID: <%d> - Pagina: <%d> - Marco: <%d>", pid_marco, nro_pagina, pagina->marco);
                 void* stream_marco = malloc(sizeof(uint16_t));
@@ -139,7 +141,6 @@ void procesar_conexion(void* args_void) {
                 agregar_uint16_t(stream_marco, &offset_marco, pagina->marco);
                 send(socket_cliente, stream_marco, offset_marco, 0);
                 free(stream_marco);
-                pthread_mutex_unlock(&mutex_paginas);
                 break;
             default:
                 break;

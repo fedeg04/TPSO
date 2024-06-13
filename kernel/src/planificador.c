@@ -543,7 +543,7 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
 
 void buscar_en_exec_y_finalizar_proceso()
 {
-    pthread_mutex_lock(&mutex_exec_list);
+    //pthread_mutex_lock(&mutex_exec_list);
     proceso_t* proceso_en_exec;
     if (list_find(pcbs_exec, (void*)tiene_el_pid))
     {
@@ -553,7 +553,7 @@ void buscar_en_exec_y_finalizar_proceso()
         agregar_uint32_t(stream, &offset, proceso_en_exec->pid);
         send(cpu_interrupt_fd, stream, offset, 0);
     }
-    pthread_mutex_unlock(&mutex_exec_list);
+    //pthread_mutex_unlock(&mutex_exec_list);
 }
 
 void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion)

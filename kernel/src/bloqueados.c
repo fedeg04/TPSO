@@ -191,6 +191,7 @@ void pedir_recurso(char *recurso_wait, proceso_t* proceso)
         instancias_recursos[indice]--;
         pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
         proceso->recursos[indice]++;
+        
     }
     else{
         pthread_mutex_lock(&mutex_recursos_instancias[indice]);   

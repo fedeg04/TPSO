@@ -665,7 +665,7 @@ bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, 
     {
         uint16_t marco = pedir_marco(pid, nro_pagina + i, logger);
         uint16_t direccion_fisica = marco*tamanio_pagina + desplazamiento;
-        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t) * 2);
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint16_t) * 2 + cant_bytes);
         int offset = 0;
         agregar_opcode(stream, &offset, ESCRIBIR);
         agregar_uint32_t(stream, &offset, pid);
@@ -677,11 +677,11 @@ bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, 
         {
             bytes_restantes = cant_bytes;
         }
-        stream = realloc(stream, offset + bytes_restantes);
         valor_a_enviar = malloc(bytes_restantes + 1);
         memcpy(valor_a_enviar, mensaje + offset_leido, bytes_restantes);
         valor_a_enviar[bytes_restantes] = '\0';
         agregar_string_sin_barra0(stream, &offset, valor_a_enviar);
+        free(valor_a_enviar);
         offset_leido+= bytes_restantes;
         bytes_utilizados += bytes_restantes;
         bytes_restantes = cant_bytes - bytes_utilizados;
@@ -692,5 +692,6 @@ bool escribir_string(char* mensaje, uint8_t cant_pags, uint16_t desplazamiento, 
         recv(memoria_fd, &resp, sizeof(op_code), 0);
         if(resp != MSG) return 0;
     }
+    free(mensaje);
     return 1;
 }
