@@ -58,7 +58,6 @@ void hacer_io_gen_sleep()
 
 void volver_a_ready(proceso_t *proceso)
 {
-    log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <READY>", proceso->pid);
     if (proceso->quantum == quantum)
     {
         pthread_mutex_lock(&mutex_ready_list);
@@ -79,53 +78,72 @@ void volver_a_ready(proceso_t *proceso)
     }
 }
 
-void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiempo_en_cpu, t_temporal* timer) {
-    if(existe_recurso(recurso_wait)) {
+void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiempo_en_cpu, t_temporal *timer)
+{
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pid == pid_proceso;
+    }
+    if (existe_recurso(recurso_wait))
+    {
         pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
         list_add(lista_de_recurso(recurso_wait), proceso);
         pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-        if(hay_recursos_de(recurso_wait)) {
-            pedir_recurso(recurso_wait);
-            volver_a_exec(proceso, tiempo_en_cpu, timer);
+        if (hay_recursos_de(recurso_wait))
+        {
+            pedir_recurso(recurso_wait,proceso, pid_proceso);
+            if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+            {
+                volver_a_exec(proceso, tiempo_en_cpu, timer);
+            }
         }
-        else {
-            void* stream = malloc(sizeof(op_code));
+        else
+        {
+            void *stream = malloc(sizeof(op_code));
             int offset = 0;
             agregar_opcode(stream, &offset, BLOQUEADO_RECURSO);
             send(cpu_dispatch_fd, stream, offset, 0);
             free(stream);
             temporal_stop(timer);
-        if (!strcmp(algoritmo_planificacion, "VRR"))
-    {
-        if (temporal_gettime(timer) - tiempo_en_cpu < proceso->quantum)
-        {
-            proceso->quantum -= temporal_gettime(timer) - tiempo_en_cpu;
-        }
-        else
-        {
-            proceso->quantum = quantum;
-        }
-    }
+            if (!strcmp(algoritmo_planificacion, "VRR"))
+            {
+                if (temporal_gettime(timer) - tiempo_en_cpu < proceso->quantum)
+                {
+                    proceso->quantum -= temporal_gettime(timer) - tiempo_en_cpu;
+                }
+                else
+                {
+                    proceso->quantum = quantum;
+                }
+            }
             temporal_destroy(timer);
             liberar_cpu();
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
             log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, recurso_wait);
-            pedir_recurso(recurso_wait);
+            pedir_recurso(recurso_wait, proceso, pid_proceso);
+            if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+            {
             verificar_detencion_de_planificacion();
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <READY>", proceso->pid);
             volver_a_ready(proceso);
+            }
         }
     }
-    else {
+    else
+    {
         void *stream = malloc(sizeof(op_code));
         int offset = 0;
         agregar_opcode(stream, &offset, RECURSO_INVALIDO);
         send(cpu_dispatch_fd, stream, offset, 0);
         free(stream);
-        if(!strcmp("VRR", algoritmo_planificacion) || !strcmp("RR", algoritmo_planificacion)){
-        esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
-    }
-        else {
-        esperar_llegada_de_proceso_fifo(proceso, logger_kernel, timer);
-    }
+        if (!strcmp("VRR", algoritmo_planificacion) || !strcmp("RR", algoritmo_planificacion))
+        {
+            esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
+        }
+        else
+        {
+            esperar_llegada_de_proceso_fifo(proceso, logger_kernel, timer);
+        }
     }
 }
 
@@ -164,17 +182,36 @@ bool existe_recurso(char *recurso)
     }
     return false;
 }
-void pedir_recurso(char *recurso_wait)
+
+bool pids_iguales(uint32_t pid1, uint32_t pid2) 
 {
+    return pid1 == pid2;
+}
+
+void pedir_recurso(char *recurso_wait, proceso_t* proceso, uint32_t pid_proceso)
+{
+    bool _pids_iguales(uint32_t pid) {
+        return pid == pid_proceso;
+    }
+
     int indice = posicion_de_recurso(recurso_wait);
+    int pid_ingresado = proceso->pid;
     sem_wait(&pcb_esperando_recurso[indice]);
     pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-    proceso_t *proceso = list_remove(lista_de_recurso(recurso_wait), 0);
-    pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-    pthread_mutex_lock(&mutex_recursos_instancias[indice]);
-    instancias_recursos[indice]--;
-    pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
-    proceso->recursos[indice]++;
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
+        list_remove_element(lista_de_recurso(recurso_wait), proceso);
+        pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+        pthread_mutex_lock(&mutex_recursos_instancias[indice]);
+        instancias_recursos[indice]--;
+        pthread_mutex_unlock(&mutex_recursos_instancias[indice]);
+        proceso->recursos[indice]++;
+        
+    }
+    else{
+        pthread_mutex_unlock(&mutex_recursos_instancias[indice]); 
+        sem_post(&pcb_esperando_recurso[indice]);  
+    }
 }
 
 void enviar_proceso_a_signal(proceso_t *proceso, char *recurso_signal, uint32_t tiempo_en_cpu, t_temporal *timer)
@@ -189,15 +226,17 @@ void enviar_proceso_a_signal(proceso_t *proceso, char *recurso_signal, uint32_t 
         void *stream = malloc(sizeof(op_code));
         int offset = 0;
         agregar_opcode(stream, &offset, RECURSO_INVALIDO);
-        log_info(logger_kernel, "OPCODE: %d", *((int*) stream));
+        log_info(logger_kernel, "OPCODE: %d", *((int *)stream));
         send(cpu_dispatch_fd, stream, offset, 0);
         free(stream);
-    if(!strcmp("VRR", algoritmo_planificacion) || !strcmp("RR", algoritmo_planificacion)){
-        esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
-    }
-        else {
-        esperar_llegada_de_proceso_fifo(proceso, logger_kernel, timer);
-    }
+        if (!strcmp("VRR", algoritmo_planificacion) || !strcmp("RR", algoritmo_planificacion))
+        {
+            esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
+        }
+        else
+        {
+            esperar_llegada_de_proceso_fifo(proceso, logger_kernel, timer);
+        }
     }
 }
 
@@ -359,13 +398,15 @@ void volver_a_exec(proceso_t *proceso, uint32_t tiempo_en_cpu, t_temporal *timer
     void *stream = malloc(sizeof(op_code));
     int offset = 0;
     agregar_opcode(stream, &offset, VUELTA_A_EXEC);
-    log_info(logger_kernel, "OPCODE: %d", *((int*) stream));
+    log_info(logger_kernel, "OPCODE: %d", *((int *)stream));
     send(cpu_dispatch_fd, stream, offset, 0);
     free(stream);
-    if(!strcmp("VRR", algoritmo_planificacion) || !strcmp("RR", algoritmo_planificacion)){
+    if (!strcmp("VRR", algoritmo_planificacion) || !strcmp("RR", algoritmo_planificacion))
+    {
         esperar_llegada_de_proceso_rr_vrr(proceso, timer, logger_kernel);
     }
-    else {
+    else
+    {
         esperar_llegada_de_proceso_fifo(proceso, logger_kernel, timer);
     }
 }

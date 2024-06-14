@@ -1,6 +1,0 @@
-INICIAR_PROCESO procesos/proceso3.txt
-INICIAR_PROCESO procesos/proceso3.txt
-INICIAR_PROCESO procesos/proceso1.txt
-INICIAR_PROCESO procesos/proceso2.txt
-INICIAR_PROCESO procesos/proceso3.txt
-INICIAR_PROCESO procesos/proceso1.txt

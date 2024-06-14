@@ -12,7 +12,7 @@ void enviar_proceso_a_wait(proceso_t* proceso, char* recurso_wait, uint32_t tiem
 int posicion_de_recurso(char* recurso);
 t_list* lista_de_recurso(char* recurso);
 bool hay_recursos_de(char* recurso);
-void pedir_recurso(char* recurso_wait);
+void pedir_recurso(char *recurso_wait, proceso_t* proceso, uint32_t pid_proceso);
 bool existe_recurso(char* recurso);
 void enviar_proceso_a_signal(proceso_t* proceso, char* recurso_signal, uint32_t tiempo_en_cpu, t_temporal* timer);
 void devolver_recurso(char* recurso_signal, proceso_t* proceso);
@@ -24,4 +24,5 @@ void recibir_fin_de_peticion(interfaz_t* interfaz);
 void volver_a_exec(proceso_t* proceso, uint32_t tiempo_en_cpu, t_temporal* timer);
 interfaz_t* buscar_interfaz(char* nombre);
 bool es_la_interfaz(interfaz_t* interfaz);
+bool pids_iguales(uint32_t pid1, uint32_t pid2);
 #endif

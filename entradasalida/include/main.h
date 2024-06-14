@@ -21,6 +21,7 @@ int block_size;
 int block_count;
 int kernel_fd;
 int memoria_fd;
+int retraso_compactacion;
 char* nombre;
 void conectar_a_kernel(char* nombre);
 void atender_pedidos_kernel();

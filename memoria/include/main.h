@@ -18,5 +18,9 @@ void* memoria;
 t_list* tablas_paginas_memoria;
 t_bitarray* bitarray_tabla;
 pthread_mutex_t mutex_memoria;
+pthread_mutex_t mutex_paginas;
+pthread_mutex_t mutex_archivo_proceso;
+pthread_mutex_t mutex_bit_array;
+t_log* logger_memoria;
 
 #endif

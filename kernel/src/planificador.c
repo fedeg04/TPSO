@@ -4,7 +4,7 @@ void planificar_nuevo_proceso(void *void_args)
 {
     nuevo_proceso_t *args = (nuevo_proceso_t *)void_args;
     proceso_t *proceso = args->proceso;
-    t_log* logger = args->logger;
+    t_log *logger = args->logger;
     free(args);
     ingresar_a_new(proceso);
     ingresar_a_ready();
@@ -35,11 +35,13 @@ void ingresar_a_ready()
     sem_post(&pcb_esperando_exec);
 }
 
-void mostrar_pids_ready(t_list* ready_list, char* cola) {
-    t_list* pids = list_map(ready_list, (void*) _get_pid);
-    char* buffer = string_new();
-    for(int i=0; i < list_size(ready_list); i++) {
-        char* pid_a_mostrar = string_itoa(list_get(pids, i));
+void mostrar_pids_ready(t_list *ready_list, char *cola)
+{
+    t_list *pids = list_map(ready_list, (void *)_get_pid);
+    char *buffer = string_new();
+    for (int i = 0; i < list_size(ready_list); i++)
+    {
+        char *pid_a_mostrar = string_itoa(list_get(pids, i));
         string_append(&buffer, pid_a_mostrar);
         string_append(&buffer, " ");
         free(pid_a_mostrar);
@@ -49,7 +51,8 @@ void mostrar_pids_ready(t_list* ready_list, char* cola) {
     list_destroy(pids);
 }
 
-uint32_t _get_pid(proceso_t* proceso) {
+uint32_t _get_pid(proceso_t *proceso)
+{
     return proceso->pid;
 }
 
@@ -148,7 +151,7 @@ void agregar_pcb(void *stream, int *offset, proceso_t *proceso)
     agregar_uint32_t(stream, offset, proceso->registros->DI);
 }
 
-void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t_temporal* timer)
+void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t_temporal *timer)
 {
     uint32_t pid;
     uint32_t quantum;
@@ -157,9 +160,10 @@ void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t_tempor
     esperar_contexto_de_ejecucion(proceso, logger, timer, 0);
 }
 
-bool es_el_proceso(proceso_t* proceso, proceso_t* proceso_a_encontrar) {
-        return proceso_a_encontrar == proceso;
-    }
+bool es_el_proceso(proceso_t *proceso, proceso_t *proceso_a_encontrar)
+{
+    return proceso_a_encontrar == proceso;
+}
 
 void manejar_interrupcion_de_timer(void *args_void)
 {
@@ -170,19 +174,16 @@ void manejar_interrupcion_de_timer(void *args_void)
     int ejecucion = args->ejecucion;
     free(args);
     usleep(proceso->quantum * 1000);
-    /*
     bool _es_el_proceso(proceso_t* proceso_a_encontrar) {
         return es_el_proceso(proceso_a_encontrar, proceso);
     }
-    */
-    if (ejecucion == ejecuciones)
+    if (ejecucion == ejecuciones && list_find(pcbs_exec, (void*) _es_el_proceso))
     {
         temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);
         log_info(logger_kernel, "TIMER DE PROCESO DESALOJADO %d: %d", proceso->pid, temporal_gettime(timer));
         mandar_fin_de_quantum_de(proceso);
     }
-
 }
 
 void mandar_fin_de_quantum_de(proceso_t *proceso)
@@ -197,10 +198,10 @@ void mandar_fin_de_quantum_de(proceso_t *proceso)
 void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_log *logger)
 {
     uint32_t pid;
-    uint32_t quantum;
+    uint32_t pquantum;
     recv(cpu_dispatch_fd, &pid, sizeof(uint32_t), 0);
     uint32_t tiempo_en_cpu = (uint32_t)temporal_gettime(timer);
-    recv(cpu_dispatch_fd, &quantum, sizeof(uint32_t), 0);
+    recv(cpu_dispatch_fd, &pquantum, sizeof(uint32_t), 0);
     if (!strcmp(algoritmo_planificacion, "VRR"))
     {
         if (tiempo_en_cpu < proceso->quantum)
@@ -215,7 +216,7 @@ void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_
     esperar_contexto_de_ejecucion(proceso, logger, timer, tiempo_en_cpu);
 }
 
-void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal* timer, uint32_t tiempo_en_cpu)
+void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal *timer, uint32_t tiempo_en_cpu)
 {
     uint32_t PC;
     uint8_t AX;
@@ -261,7 +262,8 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
     log_info(logger, "Motivo: %s", motivo_de_desalojo);
     char **substrings;
     char *instruccion_de_motivo_string;
-    if (motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] == '\n') {
+    if (motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] == '\n')
+    {
         motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] = '\0';
     }
     if (string_contains(motivo_de_desalojo, " "))
@@ -276,247 +278,294 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
 
     op_code instruccion_de_motivo = string_to_opcode(instruccion_de_motivo_string);
 
-    if(instruccion_de_motivo != WAIT && instruccion_de_motivo != SIGNAL) {
+    if (instruccion_de_motivo != WAIT && instruccion_de_motivo != SIGNAL)
+    {
         temporal_stop(timer);
         temporal_destroy(timer);
         verificar_detencion_de_planificacion();
-        liberar_cpu();    
+        liberar_cpu();
     }
 
-
     log_info(logger, "Instruccion: %s", instruccion_de_motivo_string);
-    proceso_a_interfaz_t* proceso_interfaz = malloc(sizeof(proceso_a_interfaz_t));
+    proceso_a_interfaz_t *proceso_interfaz = malloc(sizeof(proceso_a_interfaz_t));
     proceso_interfaz->proceso = proceso;
     log_info(logger_kernel, "%d", instruccion_de_motivo);
 
-    switch (instruccion_de_motivo) {
-        case IO_GEN_SLEEP:
-            proceso_interfaz->interfaz = substrings[1];
-            proceso_interfaz->uni_de_trabajo = atoi(substrings[2]);
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            enviar_proceso_a_interfaz(proceso_interfaz, "GENERICA", hacer_io_gen_sleep);
-            break;
-        case IO_STDIN_READ:
-            proceso_interfaz->interfaz = substrings[1];
-            proceso_interfaz->cant_paginas = atoi(substrings[2]);
-            proceso_interfaz->direcciones_bytes = substrings[3];
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            enviar_proceso_a_interfaz(proceso_interfaz, "STDIN", hacer_io_stdin_read);
-            break;
-        case IO_STDOUT_WRITE:
-            proceso_interfaz->interfaz = substrings[1];
-            proceso_interfaz->cant_paginas = atoi(substrings[2]);
-            proceso_interfaz->direcciones_bytes = substrings[3];
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
-            break;
-        case IO_FS_CREATE:
-            char *interfaz_create = substrings[1];
-            char *nombre_archivo_create = substrings[2];
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            break;
-        case IO_FS_DELETE:
-            char *interfaz_delete = substrings[1];
-            char *nombre_archivo_delete = substrings[2];
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            break;
-        case IO_FS_TRUNCATE:
-            char *interfaz_truncate = substrings[1];
-            char *nombre_archivo_truncate = substrings[2];
-            uint32_t registro_tamanio_truncate = atoi(substrings[3]);
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            break;
-        case IO_FS_WRITE:
-            char *interfaz_write = substrings[1];
-            char *nombre_archivo_write = substrings[2];
-            uint32_t registro_direccion_write = atoi(substrings[3]);
-            uint32_t registro_tamanio_write = atoi(substrings[4]);
-            // TODO: registro puntero archivo
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            break;
-        case IO_FS_READ:
-            char *interfaz_read = substrings[1];
-            char *nombre_archivo_read = substrings[2];
-            uint32_t registro_direccion_read = atoi(substrings[3]);
-            uint32_t registro_tamanio_read = atoi(substrings[4]);
-            // TODO: registro puntero archivo
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
-            break;
-        case WAIT:
-            char *recurso_wait = substrings[1];
-            enviar_proceso_a_wait(proceso, recurso_wait, tiempo_en_cpu, timer);
-            break;
-        case SIGNAL:
-            char *recurso_signal = substrings[1];
-            enviar_proceso_a_signal(proceso, recurso_signal, tiempo_en_cpu, timer);
-            break;
-        case EXIT:
-            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: SUCCESS", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-            entrar_a_exit(proceso);
-            break;
-        case TIMER:
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <READY>", proceso->pid);
-            proceso->quantum=  quantum;
-            pthread_mutex_unlock(&mutex_ready_list);
-            list_add(pcbs_ready, proceso);
-            mostrar_pids_ready(pcbs_ready, "READY");
-            pthread_mutex_unlock(&mutex_ready_list);
-            sem_post(&pcb_esperando_exec);
-            ingresar_a_exec();
-            break;
-        case RESIZE:
-            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT OF MEMORY", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-            entrar_a_exit(proceso);
-            break;
-        case FINALIZAR_PROCESO:
-            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
-            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-            entrar_a_exit(proceso);
-            break;
-         case RECURSO_INVALIDO:
-          log_info(logger_kernel, "Finaliza el proceso %d - Motivo: RECURSO_INVALIDO", proceso->pid);
-          log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
-          entrar_a_exit(proceso);
+    switch (instruccion_de_motivo)
+    {
+    case IO_GEN_SLEEP:
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->uni_de_trabajo = atoi(substrings[2]);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "GENERICA", hacer_io_gen_sleep);
         break;
-        default:
-
+    case IO_STDIN_READ:
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->cant_paginas = atoi(substrings[2]);
+        proceso_interfaz->direcciones_bytes = substrings[3];
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "STDIN", hacer_io_stdin_read);
+        break;
+    case IO_STDOUT_WRITE:
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->cant_paginas = atoi(substrings[2]);
+        proceso_interfaz->direcciones_bytes = substrings[3];
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
+        break;
+    case IO_FS_CREATE:
+        char *interfaz_create = substrings[1];
+        char *nombre_archivo_create = substrings[2];
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        break;
+    case IO_FS_DELETE:
+        char *interfaz_delete = substrings[1];
+        char *nombre_archivo_delete = substrings[2];
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        break;
+    case IO_FS_TRUNCATE:
+        char *interfaz_truncate = substrings[1];
+        char *nombre_archivo_truncate = substrings[2];
+        uint32_t registro_tamanio_truncate = atoi(substrings[3]);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        break;
+    case IO_FS_WRITE:
+        char *interfaz_write = substrings[1];
+        char *nombre_archivo_write = substrings[2];
+        uint32_t registro_direccion_write = atoi(substrings[3]);
+        uint32_t registro_tamanio_write = atoi(substrings[4]);
+        // TODO: registro puntero archivo
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        break;
+    case IO_FS_READ:
+        char *interfaz_read = substrings[1];
+        char *nombre_archivo_read = substrings[2];
+        uint32_t registro_direccion_read = atoi(substrings[3]);
+        uint32_t registro_tamanio_read = atoi(substrings[4]);
+        // TODO: registro puntero archivo
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        break;
+    case WAIT:
+        char *recurso_wait = substrings[1];
+        enviar_proceso_a_wait(proceso, recurso_wait, tiempo_en_cpu, timer);
+        break;
+    case SIGNAL:
+        char *recurso_signal = substrings[1];
+        enviar_proceso_a_signal(proceso, recurso_signal, tiempo_en_cpu, timer);
+        break;
+    case EXIT:
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: SUCCESS", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+        entrar_a_exit(proceso);
+        break;
+    case TIMER:
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <READY>", proceso->pid);
+        proceso->quantum = quantum;
+        pthread_mutex_unlock(&mutex_ready_list);
+        list_add(pcbs_ready, proceso);
+        mostrar_pids_ready(pcbs_ready, "READY");
+        pthread_mutex_unlock(&mutex_ready_list);
+        sem_post(&pcb_esperando_exec);
+        ingresar_a_exec();
+        break;
+    case RESIZE:
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT OF MEMORY", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+        entrar_a_exit(proceso);
+        break;
+    case FINALIZAR_PROCESO:
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+        entrar_a_exit(proceso);
+        break;
+    case RECURSO_INVALIDO:
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: RECURSO_INVALIDO", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+        entrar_a_exit(proceso);
+        break;
+    default:
     }
-    if (string_contains(motivo_de_desalojo, " ")) {
+    if (string_contains(motivo_de_desalojo, " "))
+    {
         string_array_destroy(substrings);
     }
     free(motivo_de_desalojo);
-    
+
     free(proceso_interfaz);
 }
 
-void finalizar_proceso(proceso_t *proceso) {
+void finalizar_proceso(proceso_t *proceso)
+{
     void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
     int offset = 0;
     agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
     agregar_uint32_t(stream, &offset, proceso->pid);
     send(memoria_interrupt_fd, stream, offset, 0);
+    list_add(pids_eliminados, proceso->pid);
     free(stream);
     free(proceso->recursos);
     free(proceso->registros);
     free(proceso);
+    proceso = NULL;
 }
 
-void ingresar_a_exit(proceso_t* proceso) {
+void ingresar_a_exit(proceso_t *proceso)
+{
     pthread_mutex_lock(&mutex_exit_queue);
-	queue_push(pcbs_exit, (void *)proceso);
-	pthread_mutex_unlock(&mutex_exit_queue);
+    queue_push(pcbs_exit, (void *)proceso);
+    pthread_mutex_unlock(&mutex_exit_queue);
 
     sem_post(&pcb_esperando_exit);
 }
 
-void realizar_exit() {
+void realizar_exit()
+{
     sem_wait(&pcb_esperando_exit);
 
     pthread_mutex_lock(&mutex_exit_queue);
-	proceso_t* proceso = queue_pop(pcbs_exit);
-	pthread_mutex_unlock(&mutex_exit_queue);
+    proceso_t *proceso = queue_pop(pcbs_exit);
+    pthread_mutex_unlock(&mutex_exit_queue);
     finalizar_proceso(proceso);
 }
 
-void finalizar_proceso_de_pid(uint32_t pid_proceso) {
+void finalizar_proceso_de_pid(uint32_t pid_proceso)
+{
     pid_a_finalizar = pid_proceso;
     buscar_en_cola_y_finalizar_proceso(pcbs_new, mutex_new_list);
     buscar_en_cola_y_finalizar_proceso(pcbs_ready, mutex_ready_list);
     buscar_en_cola_y_finalizar_proceso(pcbs_ready_prioritarios, mutex_ready_prioritario_list);
     int indice = 0;
-    while(list_get(interfaces, indice) != NULL) {
-        interfaz_t* interfaz = list_get(interfaces, indice);
-        buscar_en_cola_de_bloqueados_y_finalizar_proceso(&interfaz->cola, &interfaz->mutex_cola, &interfaz->fin_de_proceso, &interfaz->sem_eliminar_proceso, &interfaz->mutex_fin_de_proceso);
+    while (indice < list_size(interfaces))
+    {
+        interfaz_t *interfaz = list_get(interfaces, indice);
+        buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz);
+        indice++;
     }
     buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso();
+    buscar_en_exec_y_finalizar_proceso();
 }
 
-bool tiene_el_pid(proceso_t* proceso) {
+bool tiene_el_pid(proceso_t* proceso)
+{
     return pid_a_finalizar == proceso->pid;
 }
 
-void buscar_en_cola_y_finalizar_proceso(t_list* cola, pthread_mutex_t mutex)  {
+void buscar_en_cola_y_finalizar_proceso(t_list *cola, pthread_mutex_t mutex)
+{
     pthread_mutex_lock(&mutex);
-    proceso_t* proceso =list_remove_by_condition(cola, (void*) tiene_el_pid);
+    proceso_t *proceso = list_remove_by_condition(cola, (void *)tiene_el_pid);
     pthread_mutex_unlock(&mutex);
-    if(proceso != NULL) {
-    if(cola == pcbs_ready || cola == pcbs_ready_prioritarios) {
-        verificar_multiprogramacion();
-    }
-    desalojar_recursos(proceso);
-    ingresar_a_exit(proceso);
-    realizar_exit();
+    if (proceso != NULL)
+    {
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+        if (cola == pcbs_ready || cola == pcbs_ready_prioritarios)
+        {
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXIT>", proceso->pid);
+            verificar_multiprogramacion();
+        }
+        else 
+        {
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <EXIT>", proceso->pid);
+        }
+        desalojar_recursos(proceso);
+        ingresar_a_exit(proceso);
+        realizar_exit();
     }
 }
 
-void buscar_en_cola_de_bloqueados_y_finalizar_proceso(t_list* cola, pthread_mutex_t* mutex_lista, int* flag, sem_t* sem_eliminar, pthread_mutex_t* mutex_flag) {
-    proceso_t* proceso_a_eliminar;
-     pthread_mutex_lock(mutex_lista);
-    if(tiene_el_pid(list_get(cola, 0))) {
-        pthread_mutex_lock(mutex_flag);
-        *flag = 1;
-        pthread_mutex_unlock(mutex_flag);
-        sem_wait(sem_eliminar);
-        pthread_mutex_lock(mutex_flag);
-        *flag = 0;
-        pthread_mutex_unlock(mutex_flag);
-        proceso_a_eliminar = list_remove(cola, 0);
+void buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz_t* interfaz)
+{
+    proceso_t *proceso_a_eliminar;
+    pthread_mutex_lock(&interfaz->mutex_cola);
+
+    if (list_find(interfaz->cola, (void*) tiene_el_pid) != NULL)
+    {
+        proceso_a_eliminar = list_find(interfaz->cola, (void*) tiene_el_pid);
+        pthread_mutex_unlock(&interfaz->mutex_cola);
+        pthread_mutex_lock(&interfaz->mutex_fin_de_proceso);
+        interfaz->fin_de_proceso = 1;
+        pthread_mutex_unlock(&interfaz->mutex_fin_de_proceso);
+        sem_wait(&interfaz->sem_eliminar_proceso);
+        pthread_mutex_lock(&interfaz->mutex_fin_de_proceso);
+        interfaz->fin_de_proceso = 0;
+        pthread_mutex_unlock(&interfaz->mutex_fin_de_proceso);
+        pthread_mutex_lock(&interfaz->mutex_cola);
+        proceso_a_eliminar = list_remove(interfaz->cola, 0);
+        pthread_mutex_unlock(&interfaz->mutex_cola);
     }
-    else {
-        proceso_a_eliminar =list_remove_by_condition(cola, (void*) tiene_el_pid);
-    pthread_mutex_unlock(mutex_lista);
-    if(proceso_a_eliminar != NULL) {
-        entrar_a_exit(proceso_a_eliminar);
+    else
+    {
+        proceso_a_eliminar = list_remove_by_condition(interfaz->cola, (void *)tiene_el_pid);
+        pthread_mutex_unlock(&interfaz->mutex_cola);
     }
-}
+        if (proceso_a_eliminar != NULL)
+        {
+            log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso_a_eliminar->pid);
+            log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_eliminar->pid);
+            entrar_a_exit(proceso_a_eliminar);
+        }
 }
 
-void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso() {
-    for(int i= 0; i < cantidad_recursos; i++) {
+void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
+{
+    for (int i = 0; i < cantidad_recursos; i++)
+    {
         pthread_mutex_lock(&mutex_recursos_list[i]);
-        pthread_mutex_lock(&mutex_exec_list);
-        if(list_find(pcbs_recursos[i], (void*) tiene_el_pid) != NULL && list_find(pcbs_exec, (void*) tiene_el_pid) == NULL) {
-            list_remove_by_condition(pcbs_recursos[i], (void*) tiene_el_pid);
-            pthread_mutex_unlock(&mutex_exec_list);
+        //pthread_mutex_lock(&mutex_exec_list);
+        if (list_find(pcbs_recursos[i], (void *)tiene_el_pid) != NULL && list_find(pcbs_exec, (void *)tiene_el_pid) == NULL)
+        {
+            proceso_t* proceso = list_remove_by_condition(pcbs_recursos[i], (void *)tiene_el_pid);
+           pthread_mutex_unlock(&mutex_exec_list);
+            pthread_mutex_unlock(&mutex_recursos_list[i]);
+            if(proceso != NULL)
+            {
+                log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+                log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+                entrar_a_exit(proceso);
+            }
+        }
+        else
+        {
+            //pthread_mutex_unlock(&mutex_exec_list);
             pthread_mutex_unlock(&mutex_recursos_list[i]);
         }
-        else {
-        pthread_mutex_unlock(&mutex_exec_list);
-        pthread_mutex_unlock(&mutex_recursos_list[i]);   
-        }
     }
 }
 
-void buscar_en_exec_y_finalizar_proceso() {
-    pthread_mutex_lock(&mutex_exec_list);
-    proceso_t* proceso_en_exec = list_get(pcbs_exec, 0);
-    if(tiene_el_pid(proceso_en_exec)) {
-        void* stream = malloc(sizeof(op_code));
+void buscar_en_exec_y_finalizar_proceso()
+{
+    //pthread_mutex_lock(&mutex_exec_list);
+    if (list_any_satisfy(pcbs_exec, (void*)tiene_el_pid))
+    {
+        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
         int offset = 0;
         agregar_opcode(stream, &offset, FINALIZAR_PROCESO);
-        agregar_uint32_t(stream, &offset, proceso_en_exec->pid);
+        agregar_uint32_t(stream, &offset, pid_a_finalizar);
         send(cpu_interrupt_fd, stream, offset, 0);
+        free(stream);
     }
-    pthread_mutex_unlock(&mutex_exec_list);
+    //pthread_mutex_unlock(&mutex_exec_list);
 }
 
-void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion) {
-    if(nuevo_grado_multiprogramacion > grado_multiprogramacion) {
-        for(int i = 0; i < nuevo_grado_multiprogramacion - grado_multiprogramacion; i++) {
+void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion)
+{
+    if (nuevo_grado_multiprogramacion > grado_multiprogramacion)
+    {
+        for (int i = 0; i < nuevo_grado_multiprogramacion - grado_multiprogramacion; i++)
+        {
             sem_post(&multiprogramacion);
         }
     }
-    else {
+    else
+    {
         pthread_mutex_lock(&mutex_disminuciones);
         disminuciones_multiprogramacion = grado_multiprogramacion - nuevo_grado_multiprogramacion;
         pthread_mutex_unlock(&mutex_disminuciones);
@@ -524,53 +573,68 @@ void cambiar_grado_de_multiprogramacion(int nuevo_grado_multiprogramacion) {
     grado_multiprogramacion = nuevo_grado_multiprogramacion;
 }
 
-void entrar_a_exit(proceso_t* proceso) {
+void entrar_a_exit(proceso_t *proceso)
+{
     desalojar_recursos(proceso);
     verificar_multiprogramacion();
     ingresar_a_exit(proceso);
     realizar_exit();
 }
 
-void verificar_multiprogramacion() {
+void verificar_multiprogramacion()
+{
     pthread_mutex_lock(&mutex_disminuciones);
-    if(disminuciones_multiprogramacion > 0) {
+    if (disminuciones_multiprogramacion > 0)
+    {
         disminuciones_multiprogramacion--;
         pthread_mutex_unlock(&mutex_disminuciones);
     }
-    else {
+    else
+    {
         pthread_mutex_unlock(&mutex_disminuciones);
         sem_post(&multiprogramacion);
     }
 }
 
-void desalojar_recursos(proceso_t* proceso) {
-    for(int i= 0; i < cantidad_recursos; i++) {
-        for(int j = proceso->recursos[i]; j > 0; j--) {
+void desalojar_recursos(proceso_t *proceso)
+{
+    for (int i = 0; i < cantidad_recursos; i++)
+    {
+        if(list_find(pcbs_recursos[i], (void*) tiene_el_pid)) {
+            list_remove_element(pcbs_recursos[i],proceso);
+        }
+        for (int j = proceso->recursos[i]; j > 0; j--)
+        {
             pthread_mutex_lock(&mutex_recursos_instancias[i]);
             instancias_recursos[i]++;
             pthread_mutex_unlock(&mutex_recursos_instancias[i]);
             sem_post(&pcb_esperando_recurso[i]);
         }
     }
- }
+}
 
- void verificar_detencion_de_planificacion() {
+void verificar_detencion_de_planificacion()
+{
     pthread_mutex_lock(&mutex_planificacion_activa);
-    if(planificacion_activa == 0){
+    if (planificacion_activa == 0)
+    {
         pthread_mutex_unlock(&mutex_planificacion_activa);
         pthread_mutex_lock(&mutex_reanudar_planificacion);
         reanudar_planificacion++;
         pthread_mutex_unlock(&mutex_reanudar_planificacion);
         sem_wait(&sem_detener_planificacion);
     }
-    else {
+    else
+    {
         pthread_mutex_unlock(&mutex_planificacion_activa);
     }
- }
+}
 
-void iniciar_planificacion() {
-    for(int i = 0; i < reanudar_planificacion; i++) {
-        sem_wait(&sem_detener_planificacion);       
+void iniciar_planificacion()
+{
+    for (int i = 0; i < reanudar_planificacion; i++)
+    {
+        sem_wait(&sem_detener_planificacion);
     }
     pthread_mutex_lock(&mutex_reanudar_planificacion);
     reanudar_planificacion = 0;

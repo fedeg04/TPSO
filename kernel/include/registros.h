@@ -148,4 +148,5 @@ extern proceso_t* proceso_a_verificar;
 extern int ejecuciones;
 extern void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t_temporal* timer);
 extern void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_log *logger);
+extern t_list* pids_eliminados;
 #endif

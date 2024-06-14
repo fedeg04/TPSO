@@ -3,16 +3,30 @@
 #include <../include/init.h>
 #include <../include/main.h>
 
-void get_config(t_config* config) {
+void get_config(t_config* config)
+ {
     tipo_interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
+    puerto_kernel = config_get_string_value(config, "PUERTO_KERNEL");
+    ip_kernel = config_get_string_value(config, "IP_KERNEL"); 
+    if(!strcmp(tipo_interfaz, "GENERICA"))
+    {
+        tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");    
+    }
+    else if(!strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT"))
+    {
+        puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
+        ip_memoria = config_get_string_value(config, "IP_MEMORIA");
+    }
+    else if(!strcmp(tipo_interfaz, "DIALFS"))
+    {
     tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
     puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
     ip_memoria = config_get_string_value(config, "IP_MEMORIA");
-    puerto_kernel = config_get_string_value(config, "PUERTO_KERNEL");
-    ip_kernel = config_get_string_value(config, "IP_KERNEL");
     path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
     block_size = config_get_int_value(config, "BLOCK_SIZE");
     block_count = config_get_int_value(config, "BLOCK_COUNT");
+    retraso_compactacion= config_get_int_value(config, "RETRASO_COMPACTACION");
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -28,7 +42,10 @@ int main(int argc, char* argv[]) {
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
 
     //Se conecta a la memoria
-    memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
+    if(!strcmp(tipo_interfaz, "DIALFS") || !strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT")) 
+    {
+        memoria_fd = generar_conexion(logger_io, "memoria", ip_memoria, puerto_memoria, config_io);
+    }
 
     conectar_a_kernel(nombre);
     atender_pedidos_kernel();
@@ -187,15 +204,16 @@ void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* dire
     int offset_leido = 0;
     char* valor_a_enviar;
     for(int i = 0; i < cant_paginas * 2; i+=2) {
-        void* stream = malloc(sizeof(op_code) + 3 * sizeof(uint32_t) + string_length(leido));
+        direccion = atoi(substrings[i]); 
+        bytes = atoi(substrings[i+1]);
+        void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + 2 * sizeof(uint16_t) + bytes);
         int offset = 0;
         agregar_opcode(stream, &offset, ESCRIBIR); // ESCRIBIR en vez de IO_STDIN_READ
         agregar_uint32_t(stream, &offset, proceso_pid);
-        direccion = atoi(substrings[i]); 
-        bytes = atoi(substrings[i+1]);
         agregar_uint16_t(stream, &offset, direccion);
-        valor_a_enviar = malloc(bytes);
+        valor_a_enviar = malloc(bytes + 1);
         memcpy(valor_a_enviar, leido + offset_leido, bytes);
+        valor_a_enviar[bytes] = '\0';
         agregar_string_sin_barra0(stream, &offset, valor_a_enviar);
         send(memoria_fd, stream, offset, 0);
         free(stream);

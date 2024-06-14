@@ -26,7 +26,7 @@ int cantidad_marcos();
 int tamanio_proceso(uint32_t pid);
 tabla_t* tabla_paginas_por_pid(uint32_t pid);
 bool ampliar_tamanio_proceso(uint32_t pid, int tamanio);
-void reducir_tamanio_proceso(uint32_t pid, int tamanio, t_log* logger);	
+void reducir_tamanio_proceso(uint32_t pid, int tamanio);	
 int completar_ultima_pagina(tabla_t* tabla, int tamanio);
 bool tiene_validez(pagina_t* pagina);
 int vaciar_ultima_pagina(tabla_t* tabla, int tamanio);
@@ -42,5 +42,9 @@ extern uint32_t tam_pagina;
 extern t_bitarray* bitarray_tabla;
 extern void* memoria;
 extern pthread_mutex_t mutex_memoria;
+extern pthread_mutex_t mutex_paginas;
+extern pthread_mutex_t mutex_archivo_proceso;
+extern pthread_mutex_t mutex_bit_array;
+extern t_log* logger_memoria;
 
 #endif
