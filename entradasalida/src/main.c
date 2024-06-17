@@ -164,7 +164,22 @@ void stdout_atender_kernel() {
 }
 
 void dialfs_atender_kernel() {
-    
+     while(1) {
+        op_code opcode;
+        recv(kernel_fd, &opcode, sizeof(op_code), 0);
+        switch(opcode) {
+            case IO_FS_CREATE:
+                break;
+            case IO_FS_DELETE:
+                break;
+            case IO_FS_TRUNCATE:
+                break;
+            case IO_FS_READ:
+                break;
+            case IO_FS_WRITE:
+                break;
+            default:
+        }   
 }
 
 void fin_de(op_code opcode) {

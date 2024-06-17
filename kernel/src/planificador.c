@@ -18,12 +18,12 @@ void ingresar_a_new(proceso_t *proceso)
     pthread_mutex_unlock(&mutex_new_list);
     log_info(logger_kernel, "Se crea el proceso <%d> en NEW", proceso->pid);
 
-    sem_post(&pcb_esperando_ready);
+    //sem_post(&pcb_esperando_ready);
 }
 
 void ingresar_a_ready()
 {
-    sem_wait(&pcb_esperando_ready);
+    //sem_wait(&pcb_esperando_ready);
     sem_wait(&multiprogramacion);
 
     proceso_t *proceso = obtenerSiguienteAReady();
@@ -32,7 +32,7 @@ void ingresar_a_ready()
     list_add(pcbs_ready, (void *)proceso);
     mostrar_pids_ready(pcbs_ready, "READY");
     pthread_mutex_unlock(&mutex_ready_list);
-    sem_post(&pcb_esperando_exec);
+    //sem_post(&pcb_esperando_exec);
 }
 
 void mostrar_pids_ready(t_list *ready_list, char *cola)
@@ -66,7 +66,7 @@ proceso_t *obtenerSiguienteAReady()
 
 void ingresar_a_exec()
 {
-    sem_wait(&pcb_esperando_exec);
+    //sem_wait(&pcb_esperando_exec);
     pthread_mutex_lock(&mutex_exec_list);
     proceso_t *proceso = obtenerSiguienteAExec();
     list_add(pcbs_exec, (void *)proceso);
@@ -317,41 +317,46 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
         break;
     case IO_FS_CREATE:
-        char *interfaz_create = substrings[1];
-        char *nombre_archivo_create = substrings[2];
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_create);
         break;
     case IO_FS_DELETE:
-        char *interfaz_delete = substrings[1];
-        char *nombre_archivo_delete = substrings[2];
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_delete);
         break;
     case IO_FS_TRUNCATE:
-        char *interfaz_truncate = substrings[1];
-        char *nombre_archivo_truncate = substrings[2];
-        uint32_t registro_tamanio_truncate = atoi(substrings[3]);
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
+        proceso_interfaz->registro_tamanio = atoi(substrings[3]);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_truncate);
         break;
     case IO_FS_WRITE:
-        char *interfaz_write = substrings[1];
-        char *nombre_archivo_write = substrings[2];
-        uint32_t registro_direccion_write = atoi(substrings[3]);
-        uint32_t registro_tamanio_write = atoi(substrings[4]);
-        // TODO: registro puntero archivo
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
+        proceso_interfaz->registro_direccion = atoi(substrings[3]);
+        proceso_interfaz->registro_tamanio = atoi(substrings[4]);
+        proceso_interfaz->registro_puntero = substrings[5];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_write);
         break;
     case IO_FS_READ:
-        char *interfaz_read = substrings[1];
-        char *nombre_archivo_read = substrings[2];
-        uint32_t registro_direccion_read = atoi(substrings[3]);
-        uint32_t registro_tamanio_read = atoi(substrings[4]);
-        // TODO: registro puntero archivo
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
+        proceso_interfaz->registro_direccion = atoi(substrings[3]);
+        proceso_interfaz->registro_tamanio = atoi(substrings[4]);
+        proceso_interfaz->registro_puntero = substrings[5];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_read);
         break;
     case WAIT:
         char *recurso_wait = substrings[1];
@@ -373,7 +378,7 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         list_add(pcbs_ready, proceso);
         mostrar_pids_ready(pcbs_ready, "READY");
         pthread_mutex_unlock(&mutex_ready_list);
-        sem_post(&pcb_esperando_exec);
+        //sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
         break;
     case RESIZE:
@@ -423,12 +428,12 @@ void ingresar_a_exit(proceso_t *proceso)
     queue_push(pcbs_exit, (void *)proceso);
     pthread_mutex_unlock(&mutex_exit_queue);
 
-    sem_post(&pcb_esperando_exit);
+    //sem_post(&pcb_esperando_exit);
 }
 
 void realizar_exit()
 {
-    sem_wait(&pcb_esperando_exit);
+    //sem_wait(&pcb_esperando_exit);
 
     pthread_mutex_lock(&mutex_exit_queue);
     proceso_t *proceso = queue_pop(pcbs_exit);
