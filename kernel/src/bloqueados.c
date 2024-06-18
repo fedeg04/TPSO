@@ -191,7 +191,7 @@ bool pids_iguales(uint32_t pid1, uint32_t pid2)
 void pedir_recurso(char *recurso_wait, proceso_t* proceso, uint32_t pid_proceso)
 {
     bool _pids_iguales(uint32_t pid) {
-        return pid == pid_proceso;
+        return pids_iguales(pid, pid_proceso);
     }
 
     int indice = posicion_de_recurso(recurso_wait);
@@ -321,10 +321,16 @@ void hacer_io_gen_sleep(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
 {
     proceso_t *proceso = proceso_interfaz->proceso;
     uint32_t uni_de_trabajo = proceso_interfaz->uni_de_trabajo;
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -337,6 +343,11 @@ void hacer_io_gen_sleep(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_stdin_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz)
@@ -344,10 +355,16 @@ void hacer_io_stdin_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *int
     proceso_t *proceso = proceso_interfaz->proceso;
     uint32_t cant_paginas = proceso_interfaz->cant_paginas;
     char *direcciones_bytes = proceso_interfaz->direcciones_bytes;
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -362,6 +379,11 @@ void hacer_io_stdin_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *int
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_stdout_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz)
@@ -369,10 +391,16 @@ void hacer_io_stdout_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *i
     proceso_t *proceso = proceso_interfaz->proceso;
     uint32_t cant_paginas = proceso_interfaz->cant_paginas;
     char *direcciones_bytes = proceso_interfaz->direcciones_bytes;
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -387,16 +415,27 @@ void hacer_io_stdout_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *i
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_fs_create(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
 {
     proceso_t *proceso;
     // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -408,16 +447,27 @@ void hacer_io_fs_create(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_fs_delete(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
 {
     proceso_t *proceso;
     // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -429,16 +479,23 @@ void hacer_io_fs_delete(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
 }
 
 void hacer_io_fs_truncate(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
 {
     proceso_t *proceso;
     // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -450,16 +507,27 @@ void hacer_io_fs_truncate(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *in
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
 {
     proceso_t *proceso;
     // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -471,16 +539,27 @@ void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inter
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
 {
     proceso_t *proceso;
     // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -492,6 +571,11 @@ void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interf
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void volver_a_exec(proceso_t *proceso, uint32_t tiempo_en_cpu, t_temporal *timer)

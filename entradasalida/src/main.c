@@ -180,6 +180,7 @@ void dialfs_atender_kernel() {
                 break;
             default:
         }   
+    }
 }
 
 void fin_de(op_code opcode) {
