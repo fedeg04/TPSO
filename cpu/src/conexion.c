@@ -91,36 +91,41 @@ void procesar_conexion_dispatch(void *args_void)
 int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, proceso_t* pcb, int socket) {
     char* comando = parametros[0];
     op_code opcode = string_to_opcode(comando);
-    char* primer_parametro;
-    char* segundo_parametro;
-    char* tercer_parametro;
-    uint32_t primer_valor;
-    uint32_t segundo_valor;
-    uint32_t tercer_valor;
+    char* primer_parametro = NULL;
+    char* segundo_parametro = NULL;
+    char* tercer_parametro = NULL;
+    char* cuarto_parametro = NULL;
+    char* quinto_parametro = NULL;
+    uint32_t primer_valor = 0;
+    uint32_t segundo_valor = 0;
+    uint32_t tercer_valor = 0;
+    uint32_t cuarto_valor = 0;
+    uint32_t quinto_valor = 0;
     int length = 0;
     while (parametros[length] != NULL) {
         length++;
     }
-    if(length == 2) {
+    if (length > 1) {
         primer_parametro = parametros[1];
         primer_valor = get_valor_registro(primer_parametro);
     }
-    if (length == 3)
-    {
-        primer_parametro = parametros[1];
+    if (length > 2) {
         segundo_parametro = parametros[2];
-        primer_valor = get_valor_registro(primer_parametro);
         segundo_valor = get_valor_registro(segundo_parametro);
     }
-    if (length == 4)
-    {
-        primer_parametro = parametros[1];
-        segundo_parametro = parametros[2];
+    if (length > 3) {
         tercer_parametro = parametros[3];
-        primer_valor = get_valor_registro(primer_parametro);
-        segundo_valor = get_valor_registro(segundo_parametro);
         tercer_valor = get_valor_registro(tercer_parametro);
     }
+    if (length > 4) {
+        cuarto_parametro = parametros[4];
+        cuarto_valor = get_valor_registro(cuarto_parametro);
+    }
+    if (length > 5) {
+        quinto_parametro = parametros[5];
+        quinto_valor = get_valor_registro(quinto_parametro);
+    }
+    
 
     switch(opcode) {
         case SET:
@@ -226,15 +231,30 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_write, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
             return 0;
         case IO_FS_CREATE:
-          return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            registros_cpu->PC++;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case IO_FS_DELETE:
-            return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
+            registros_cpu->PC++;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case IO_FS_TRUNCATE:
-            return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            registros_cpu->PC++;
+            enviar_contexto(socket, pcb, instruccion);
+            return 0;
         case IO_FS_WRITE:
-            return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro, cuarto_parametro, quinto_parametro);
+            uint8_t cant_paginas_fs_write = cantidad_paginas_enviar(cuarto_valor, tercer_valor);
+            envio_kernel_io_fs(IO_FS_WRITE, primer_parametro, cant_paginas_fs_write, cuarto_valor, desplazamiento_direccion_logica(tercer_valor), pcb, socket, pagina_direccion_logica(tercer_valor), logger, segundo_parametro, quinto_valor);
+            return 0;
         case IO_FS_READ:
-            return 1;
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro, cuarto_parametro, quinto_parametro);
+            uint8_t cant_paginas_fs_read = cantidad_paginas_enviar(cuarto_valor, tercer_valor);
+            envio_kernel_io_fs(IO_FS_READ, primer_parametro, cant_paginas_fs_read, cuarto_valor, desplazamiento_direccion_logica(tercer_valor), pcb, socket, pagina_direccion_logica(tercer_valor), logger, segundo_parametro, quinto_valor);
+            return 0;
         case EXIT:
             log_info(logger, "PID: <%d> - Ejecutando: <%s>", pcb->pid, instruccion);
             enviar_contexto(socket, pcb, instruccion);
@@ -619,6 +639,32 @@ void envio_kernel_io(op_code opcode, char* interfaz, uint8_t cant_paginas_read, 
     registros_cpu->PC++;
     enviar_contexto(socket, pcb, io_stdin_a_kernel);
     free(io_stdin_a_kernel);
+    free(envio_direcciones_tamanios);
+}
+
+void envio_kernel_io_fs(op_code opcode, char* interfaz, uint8_t cant_paginas, uint32_t tamanio, uint16_t desplazamiento, proceso_t* pcb, int socket, uint32_t nro_pagina, t_log* logger, char* nombre_archivo, uint32_t puntero) {
+    char* opcode_str;
+    //IO_FS_WRITE 
+    if (opcode == IO_FS_WRITE) {
+        opcode_str = "IO_FS_WRITE";
+    } else if (opcode == IO_FS_READ) {
+        opcode_str = "IO_FS_READ";
+    }
+    char* puntero_string = string_itoa((int)puntero);
+    char* io_fs_a_kernel = malloc(strlen(interfaz) + strlen(opcode_str) + 4 + strlen(nombre_archivo) + strlen(puntero_string));
+    strcpy(io_fs_a_kernel, opcode_str);
+    string_append(&io_fs_a_kernel, " ");
+    string_append(&io_fs_a_kernel, interfaz);
+    string_append(&io_fs_a_kernel, " ");
+    string_append(&io_fs_a_kernel, nombre_archivo);
+    string_append(&io_fs_a_kernel, " ");
+    string_append(&io_fs_a_kernel, puntero_string);
+    char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas, tamanio, desplazamiento, nro_pagina, pcb->pid, logger);
+    string_append(&io_fs_a_kernel, " ");
+    string_append(&io_fs_a_kernel, envio_direcciones_tamanios);
+    registros_cpu->PC++;
+    enviar_contexto(socket, pcb, io_fs_a_kernel);
+    free(io_fs_a_kernel);
     free(envio_direcciones_tamanios);
 }
 

@@ -8,7 +8,6 @@ void controlar_seniales(t_log* logger_cpu) {
 }
 
 void cerrar_seniales() {
-    log_info(logger, "aaaaaa");
     eliminar_tlb();
     exit(0);
 }
