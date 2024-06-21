@@ -33,4 +33,5 @@ op_code string_to_opcode(char* string) {
     else if (strcmp(string, "MSG") == 0) return MSG;
     else if (strcmp(string, "TIMER") == 0) return TIMER;
     else if (strcmp(string, "RECURSO_INVALIDO") == 0) return RECURSO_INVALIDO;
+    else if (strcmp(string, "OUTOFMEMORY") == 0) return OUTOFMEMORY;
 }

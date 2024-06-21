@@ -405,7 +405,7 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         //sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
         break;
-    case RESIZE:
+    case OUTOFMEMORY:
         log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT OF MEMORY", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
         entrar_a_exit(proceso);
