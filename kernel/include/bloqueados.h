@@ -20,6 +20,11 @@ void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, char* t
 void hacer_io_gen_sleep(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
 void hacer_io_stdin_read(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
 void hacer_io_stdout_write(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
+void hacer_io_fs_create(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+void hacer_io_fs_delete(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+void hacer_io_fs_truncate(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
 void recibir_fin_de_peticion(interfaz_t* interfaz);
 void volver_a_exec(proceso_t* proceso, uint32_t tiempo_en_cpu, t_temporal* timer);
 interfaz_t* buscar_interfaz(char* nombre);

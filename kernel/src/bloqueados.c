@@ -64,7 +64,7 @@ void volver_a_ready(proceso_t *proceso)
         list_add(pcbs_ready, proceso);
         mostrar_pids_ready(pcbs_ready, "READY");
         pthread_mutex_unlock(&mutex_ready_list);
-        sem_post(&pcb_esperando_exec);
+        //sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
     }
     else
@@ -73,7 +73,7 @@ void volver_a_ready(proceso_t *proceso)
         list_add(pcbs_ready_prioritarios, proceso);
         mostrar_pids_ready(pcbs_ready_prioritarios, "READY PRIORITARIO");
         pthread_mutex_unlock(&mutex_ready_prioritario_list);
-        sem_post(&pcb_esperando_exec);
+        //sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
     }
 }
@@ -86,9 +86,6 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
     }
     if (existe_recurso(recurso_wait))
     {
-        pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
-        list_add(lista_de_recurso(recurso_wait), proceso);
-        pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
         if (hay_recursos_de(recurso_wait))
         {
             pedir_recurso(recurso_wait,proceso, pid_proceso);
@@ -99,6 +96,9 @@ void enviar_proceso_a_wait(proceso_t *proceso, char *recurso_wait, uint32_t tiem
         }
         else
         {
+            pthread_mutex_lock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);
+            list_add(lista_de_recurso(recurso_wait), proceso);
+            pthread_mutex_unlock(&mutex_recursos_list[posicion_de_recurso(recurso_wait)]);  
             void *stream = malloc(sizeof(op_code));
             int offset = 0;
             agregar_opcode(stream, &offset, BLOQUEADO_RECURSO);
@@ -191,7 +191,7 @@ bool pids_iguales(uint32_t pid1, uint32_t pid2)
 void pedir_recurso(char *recurso_wait, proceso_t* proceso, uint32_t pid_proceso)
 {
     bool _pids_iguales(uint32_t pid) {
-        return pid == pid_proceso;
+        return pids_iguales(pid, pid_proceso);
     }
 
     int indice = posicion_de_recurso(recurso_wait);
@@ -321,10 +321,16 @@ void hacer_io_gen_sleep(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
 {
     proceso_t *proceso = proceso_interfaz->proceso;
     uint32_t uni_de_trabajo = proceso_interfaz->uni_de_trabajo;
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -337,6 +343,11 @@ void hacer_io_gen_sleep(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_stdin_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz)
@@ -344,10 +355,16 @@ void hacer_io_stdin_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *int
     proceso_t *proceso = proceso_interfaz->proceso;
     uint32_t cant_paginas = proceso_interfaz->cant_paginas;
     char *direcciones_bytes = proceso_interfaz->direcciones_bytes;
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -357,11 +374,16 @@ void hacer_io_stdin_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *int
     agregar_uint32_t(stream, &offset, proceso->pid);
     agregar_uint32_t(stream, &offset, cant_paginas);
     agregar_string(stream, &offset, direcciones_bytes);
-    int socket_generica = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
-    send(socket_generica, stream, offset, 0);
+    int socket_stdin = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_stdin, stream, offset, 0);
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_stdout_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz)
@@ -369,10 +391,16 @@ void hacer_io_stdout_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *i
     proceso_t *proceso = proceso_interfaz->proceso;
     uint32_t cant_paginas = proceso_interfaz->cant_paginas;
     char *direcciones_bytes = proceso_interfaz->direcciones_bytes;
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_add(interfaz->cola, proceso);
     pthread_mutex_unlock(&interfaz->mutex_cola);
     pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
     pthread_mutex_lock(&interfaz->mutex_cola);
     list_get(interfaz->cola, 0);
     pthread_mutex_unlock(&interfaz->mutex_cola);
@@ -382,11 +410,172 @@ void hacer_io_stdout_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *i
     agregar_uint32_t(stream, &offset, proceso->pid);
     agregar_uint32_t(stream, &offset, cant_paginas);
     agregar_string(stream, &offset, direcciones_bytes);
-    int socket_generica = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
-    send(socket_generica, stream, offset, 0);
+    int socket_stdout = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_stdout, stream, offset, 0);
     free(stream);
     sem_wait(&interfaz->sem_vuelta);
     recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
+}
+
+void hacer_io_fs_create(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
+{
+    proceso_t *proceso;
+    // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code)); // poner el tamaño acorde a lo que se envie
+    int offset = 0;
+    // agregar las cosas al stream
+    int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_dialfs, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
+}
+
+void hacer_io_fs_delete(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
+{
+    proceso_t *proceso;
+    // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code)); // poner el tamaño acorde a lo que se envie
+    int offset = 0;
+    // agregar las cosas al stream
+    int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_dialfs, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+    }
+}
+
+void hacer_io_fs_truncate(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
+{
+    proceso_t *proceso;
+    // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code)); // poner el tamaño acorde a lo que se envie
+    int offset = 0;
+    // agregar las cosas al stream
+    int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_dialfs, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
+}
+
+void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
+{
+    proceso_t *proceso;
+    // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code)); // poner el tamaño acorde a lo que se envie
+    int offset = 0;
+    // agregar las cosas al stream
+    int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_dialfs, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
+}
+
+void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz) 
+{
+    proceso_t *proceso;
+    // sacar del struct proceso_interfaz los datos necesarios
+    uint32_t pid_proceso = proceso->pid;
+    bool _pids_iguales(uint32_t pid) {
+        return pids_iguales(pid, pid_proceso);
+    }
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_add(interfaz->cola, proceso);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    pthread_mutex_lock(&interfaz->mutex_exec);
+    if(!list_any_satisfy(pids_eliminados, _pids_iguales))
+    {
+    pthread_mutex_lock(&interfaz->mutex_cola);
+    list_get(interfaz->cola, 0);
+    pthread_mutex_unlock(&interfaz->mutex_cola);
+    void *stream = malloc(sizeof(op_code)); // poner el tamaño acorde a lo que se envie
+    int offset = 0;
+    // agregar las cosas al stream
+    int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
+    send(socket_dialfs, stream, offset, 0);
+    free(stream);
+    sem_wait(&interfaz->sem_vuelta);
+    recibir_fin_de_peticion(interfaz);
+    }
+    else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void volver_a_exec(proceso_t *proceso, uint32_t tiempo_en_cpu, t_temporal *timer)

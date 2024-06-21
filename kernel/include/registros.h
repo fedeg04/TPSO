@@ -135,6 +135,11 @@ extern void enviar_proceso_a_interfaz(proceso_a_interfaz_t* proceso_a_interfaz, 
 extern void hacer_io_gen_sleep(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
 extern void hacer_io_stdin_read(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
 extern void hacer_io_stdout_write(proceso_a_interfaz_t* proceso_interfaz, interfaz_t* interfaz);
+extern void hacer_io_fs_create(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+extern void hacer_io_fs_delete(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+extern void hacer_io_fs_truncate(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+extern void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
+extern void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz);
 extern void ejecutar_proceso(proceso_t* proceso, t_log* logger, int quantum);
 extern void liberar_cpu();
 extern void ingresar_a_exec();
@@ -149,4 +154,5 @@ extern int ejecuciones;
 extern void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t_temporal* timer);
 extern void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_log *logger);
 extern t_list* pids_eliminados;
+extern bool pids_iguales(uint32_t pid1, uint32_t pid2);
 #endif

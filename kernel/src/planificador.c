@@ -18,21 +18,28 @@ void ingresar_a_new(proceso_t *proceso)
     pthread_mutex_unlock(&mutex_new_list);
     log_info(logger_kernel, "Se crea el proceso <%d> en NEW", proceso->pid);
 
-    sem_post(&pcb_esperando_ready);
+    //sem_post(&pcb_esperando_ready);
 }
 
 void ingresar_a_ready()
 {
-    sem_wait(&pcb_esperando_ready);
+    //sem_wait(&pcb_esperando_ready);
     sem_wait(&multiprogramacion);
 
     proceso_t *proceso = obtenerSiguienteAReady();
+    if(proceso != NULL)
+    {
     log_info(logger_kernel, "PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <READY>", proceso->pid);
     pthread_mutex_lock(&mutex_ready_list);
     list_add(pcbs_ready, (void *)proceso);
     mostrar_pids_ready(pcbs_ready, "READY");
     pthread_mutex_unlock(&mutex_ready_list);
-    sem_post(&pcb_esperando_exec);
+    //sem_post(&pcb_esperando_exec);
+    }
+    else
+    {
+        sem_post(&multiprogramacion);       
+    }
 }
 
 void mostrar_pids_ready(t_list *ready_list, char *cola)
@@ -58,20 +65,33 @@ uint32_t _get_pid(proceso_t *proceso)
 
 proceso_t *obtenerSiguienteAReady()
 {
+    proceso_t* pcb;
     pthread_mutex_lock(&mutex_new_list);
-    proceso_t *pcb = list_remove(pcbs_new, 0);
+    if(!list_is_empty(pcbs_new)){
+        pcb = list_remove(pcbs_new, 0);
+    }
+    else
+    {
+        pcb = NULL;
+    }
     pthread_mutex_unlock(&mutex_new_list);
     return pcb;
 }
 
 void ingresar_a_exec()
 {
-    sem_wait(&pcb_esperando_exec);
+    //sem_wait(&pcb_esperando_exec);
     pthread_mutex_lock(&mutex_exec_list);
     proceso_t *proceso = obtenerSiguienteAExec();
+    if(proceso != NULL){
     list_add(pcbs_exec, (void *)proceso);
     log_info(logger_kernel, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXEC>", proceso->pid);
     ejecutar_proceso(proceso, logger_kernel, proceso->quantum);
+    }
+    else
+    {
+        pthread_mutex_unlock(&mutex_exec_list);
+    }
 }
 
 proceso_t *obtenerSiguienteAExec()
@@ -83,11 +103,15 @@ proceso_t *obtenerSiguienteAExec()
         pcb = list_remove(pcbs_ready_prioritarios, 0);
         pthread_mutex_unlock(&mutex_ready_prioritario_list);
     }
-    else
+    else if(!list_is_empty(pcbs_ready))
     {
         pthread_mutex_lock(&mutex_ready_list);
         pcb = list_remove(pcbs_ready, 0);
         pthread_mutex_unlock(&mutex_ready_list);
+    }
+    else
+    {
+        pcb = NULL;
     }
     return pcb;
 }
@@ -317,41 +341,46 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         enviar_proceso_a_interfaz(proceso_interfaz, "STDOUT", hacer_io_stdout_write);
         break;
     case IO_FS_CREATE:
-        char *interfaz_create = substrings[1];
-        char *nombre_archivo_create = substrings[2];
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_create);
         break;
     case IO_FS_DELETE:
-        char *interfaz_delete = substrings[1];
-        char *nombre_archivo_delete = substrings[2];
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_delete);
         break;
     case IO_FS_TRUNCATE:
-        char *interfaz_truncate = substrings[1];
-        char *nombre_archivo_truncate = substrings[2];
-        uint32_t registro_tamanio_truncate = atoi(substrings[3]);
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
+        proceso_interfaz->registro_tamanio = atoi(substrings[3]);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_truncate);
         break;
     case IO_FS_WRITE:
-        char *interfaz_write = substrings[1];
-        char *nombre_archivo_write = substrings[2];
-        uint32_t registro_direccion_write = atoi(substrings[3]);
-        uint32_t registro_tamanio_write = atoi(substrings[4]);
-        // TODO: registro puntero archivo
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
+        proceso_interfaz->registro_direccion = atoi(substrings[3]);
+        proceso_interfaz->registro_tamanio = atoi(substrings[4]);
+        proceso_interfaz->registro_puntero = substrings[5];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_write);
         break;
     case IO_FS_READ:
-        char *interfaz_read = substrings[1];
-        char *nombre_archivo_read = substrings[2];
-        uint32_t registro_direccion_read = atoi(substrings[3]);
-        uint32_t registro_tamanio_read = atoi(substrings[4]);
-        // TODO: registro puntero archivo
+        proceso_interfaz->interfaz = substrings[1];
+        proceso_interfaz->nombre_archivo = substrings[2];
+        proceso_interfaz->registro_direccion = atoi(substrings[3]);
+        proceso_interfaz->registro_tamanio = atoi(substrings[4]);
+        proceso_interfaz->registro_puntero = substrings[5];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
+        enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_read);
         break;
     case WAIT:
         char *recurso_wait = substrings[1];
@@ -373,7 +402,7 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         list_add(pcbs_ready, proceso);
         mostrar_pids_ready(pcbs_ready, "READY");
         pthread_mutex_unlock(&mutex_ready_list);
-        sem_post(&pcb_esperando_exec);
+        //sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
         break;
     case OUTOFMEMORY:
@@ -423,12 +452,12 @@ void ingresar_a_exit(proceso_t *proceso)
     queue_push(pcbs_exit, (void *)proceso);
     pthread_mutex_unlock(&mutex_exit_queue);
 
-    sem_post(&pcb_esperando_exit);
+    //sem_post(&pcb_esperando_exit);
 }
 
 void realizar_exit()
 {
-    sem_wait(&pcb_esperando_exit);
+    //sem_wait(&pcb_esperando_exit);
 
     pthread_mutex_lock(&mutex_exit_queue);
     proceso_t *proceso = queue_pop(pcbs_exit);
@@ -486,8 +515,8 @@ void buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz_t* interfaz)
     proceso_t *proceso_a_eliminar;
     pthread_mutex_lock(&interfaz->mutex_cola);
 
-    if (list_find(interfaz->cola, (void*) tiene_el_pid) != NULL)
-    {
+    if (list_find(interfaz->cola, (void*) tiene_el_pid) != NULL && tiene_el_pid(list_get(interfaz->cola, 0)))
+    {       
         proceso_a_eliminar = list_find(interfaz->cola, (void*) tiene_el_pid);
         pthread_mutex_unlock(&interfaz->mutex_cola);
         pthread_mutex_lock(&interfaz->mutex_fin_de_proceso);
@@ -499,14 +528,15 @@ void buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz_t* interfaz)
         pthread_mutex_unlock(&interfaz->mutex_fin_de_proceso);
         pthread_mutex_lock(&interfaz->mutex_cola);
         proceso_a_eliminar = list_remove(interfaz->cola, 0);
-        pthread_mutex_unlock(&interfaz->mutex_cola);
+        pthread_mutex_unlock(&interfaz->mutex_cola);        
     }
     else
-    {
+        {
         proceso_a_eliminar = list_remove_by_condition(interfaz->cola, (void *)tiene_el_pid);
         pthread_mutex_unlock(&interfaz->mutex_cola);
-    }
-        if (proceso_a_eliminar != NULL)
+        }
+    
+        if (proceso_a_eliminar != NULL )
         {
             log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso_a_eliminar->pid);
             log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_eliminar->pid);
