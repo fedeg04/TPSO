@@ -3,10 +3,14 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <../include/init.h>
 #include <../include/protocolo.h>
 #include <../include/serializacion.h>
 #include <../include/seniales.h>
+#include <commons/collections/list.h>
+#include <commons/bitarray.h>
 #include <readline/readline.h>
 
 t_log* logger_io;
@@ -32,6 +36,14 @@ void dialfs_atender_kernel();
 void fin_de(op_code opcode);
 void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes, char* leido);
 void enviar_pedido_stdout(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes);
+void iniciar_fs();
+void iniciar_bloques();
+void iniciar_bitmap();
+void iniciar_metadata();
+FILE* f_bloques;
+FILE* bitmap;
+t_bitarray* bitarray;
+t_list* archivos_metadata;
 
 
 

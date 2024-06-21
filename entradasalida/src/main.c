@@ -32,13 +32,15 @@ void get_config(t_config* config)
 int main(int argc, char* argv[]) {
     logger_io = iniciar_logger("io.log", "I/O: ");
     log_info(logger_io, "%s", argv[2]); // ./bin/entradasalida "nombre" "unpath"
-    nombre = argv[1];
+    //nombre = argv[1];
+    nombre = "fs1";
     log_info(logger_io, "%s", nombre); 
-    t_config* config_io = iniciar_config(argv[2]);
+    //t_config* config_io = iniciar_config(argv[2]);
+    t_config* config_io = iniciar_config("dialfs.config");
     get_config(config_io);
 
     controlar_seniales(logger_io);
-// Se conecta al kernel
+    // Se conecta al kernel
     kernel_fd = generar_conexion(logger_io, "kernel", ip_kernel, puerto_kernel, config_io);
 
     //Se conecta a la memoria
@@ -77,6 +79,7 @@ void atender_pedidos_kernel() {
     stdout_atender_kernel();
    } 
    if(!strcmp("DIALFS", tipo_interfaz)) {
+    iniciar_fs();
     dialfs_atender_kernel();
    } 
 }
@@ -168,17 +171,36 @@ void dialfs_atender_kernel() {
         op_code opcode;
         recv(kernel_fd, &opcode, sizeof(op_code), 0);
         uint32_t proceso_pid;
-        recv(kernel_fd, )
+        recv(kernel_fd, &proceso_pid, sizeof(uint32_t), 0);
+        uint32_t tam_archivo;
+        recv(kernel_fd, &tam_archivo, sizeof(uint32_t), 0);
+        char* nombre_arch;
+        recv(kernel_fd, nombre_arch, tam_archivo, 0);
         switch(opcode) {
             case IO_FS_CREATE:
+                crear_archivo(nombre_arch);
                 break;
             case IO_FS_DELETE:
                 break;
             case IO_FS_TRUNCATE:
+                uint32_t registro_tamanio;
+                recv(kernel_fd, &registro_tamanio, sizeof(uint32_t), 0);
                 break;
             case IO_FS_READ:
+                uint32_t puntero_r;
+                recv(kernel_fd, &puntero_r, sizeof(uint32_t), 0);
+                uint32_t tam_archivo_dir_bytes_r;
+                recv(kernel_fd, &tam_archivo_dir_bytes_r, sizeof(uint32_t), 0);
+                char* dir_bytes_r;
+                recv(kernel_fd, dir_bytes_r, tam_archivo_dir_bytes_r, 0);
                 break;
             case IO_FS_WRITE:
+                uint32_t puntero_w;
+                recv(kernel_fd, &puntero_w, sizeof(uint32_t), 0);
+                uint32_t tam_archivo_dir_bytes_w;
+                recv(kernel_fd, &tam_archivo_dir_bytes_w, sizeof(uint32_t), 0);
+                char* dir_bytes_w;
+                recv(kernel_fd, dir_bytes_w, tam_archivo_dir_bytes_w, 0);
                 break;
             default:
         }   
@@ -241,4 +263,45 @@ void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* dire
     free(leido);
     free(direcciones_bytes);
     string_array_destroy(substrings);
+}
+
+void iniciar_fs() {
+    iniciar_bloques();
+    iniciar_bitmap();
+    iniciar_metadata();
+}
+
+void iniciar_bloques() {
+    string_append(&path_base_dialfs, "/bloques.dat");
+    f_bloques = fopen(path_base_dialfs, "r"); 
+    if(!f_bloques) {
+        f_bloques = fopen(path_base_dialfs, "wb");
+        int fd = fileno(f_bloques);
+        ftruncate(fd, block_size*block_count);
+    }
+}
+
+void iniciar_bitmap() {
+    /*char* bitarray_string = malloc(block_count+7/8);
+    memset(bitarray_string, 0x00, sizeof(bitarray_string));
+    bitarray = bitarray_create(bitarray_string,block_count+7/8);*/
+    string_append(&path_base_dialfs, "/bitmap.dat");
+    f_bloques = fopen(path_base_dialfs, "r"); 
+    if(!f_bloques) {
+        f_bloques = fopen(path_base_dialfs, "wb");
+        int fd = fileno(f_bloques);
+        ftruncate(fd, block_count/8);
+        char *zero_buffer = calloc(block_count/8, sizeof(char));
+        fwrite(zero_buffer, sizeof(char), block_count/8, f_bloques);
+        free(zero_buffer);
+    }
+    free(path_base_dialfs);
+}
+
+void iniciar_metadata() {
+    list_create(archivos_metadata);
+}
+
+void crear_archivo(char* nombre) {
+
 }
