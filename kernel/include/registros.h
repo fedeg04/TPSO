@@ -34,7 +34,7 @@ typedef struct {
     uint32_t registro_direccion;
     uint32_t registro_tamanio;
     char* nombre_archivo;
-    char* registro_puntero;
+    uint32_t registro_puntero;
     uint32_t cant_paginas;
     char* direcciones_bytes;
 } proceso_a_interfaz_t;

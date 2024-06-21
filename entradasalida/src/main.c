@@ -167,6 +167,8 @@ void dialfs_atender_kernel() {
      while(1) {
         op_code opcode;
         recv(kernel_fd, &opcode, sizeof(op_code), 0);
+        uint32_t proceso_pid;
+        recv(kernel_fd, )
         switch(opcode) {
             case IO_FS_CREATE:
                 break;
