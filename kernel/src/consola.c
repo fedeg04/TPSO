@@ -96,6 +96,7 @@ void procesar_instruccion(char *instruccion, t_log *logger, int socket)
     }
     else if (!strcmp(comando, "PROCESO_ESTADO"))
     {
+        listar_procesos();
     }
     string_array_destroy(substrings);
     // le mandamos a la memoria --> send(socket, estructura con opcode y path, tamanio de struct, )
@@ -138,4 +139,31 @@ void ejecutar_script(char *path, t_log *logger, int socket)
 bool existe_archivo(char *path)
 {
     return fopen(path, "r") != NULL;
+}
+
+void listar_procesos()
+{
+    log_info(logger_kernel, "EXEC");
+    mostrar_pids_cola(pcbs_exec, "EXEC");
+    log_info(logger_kernel, "READY");
+    mostrar_pids_cola(pcbs_ready_prioritarios, "READY PRIORITARIA");
+    mostrar_pids_cola(pcbs_ready, "READY");
+    log_info(logger_kernel, "BLOCKED");
+    log_info(logger_kernel, "COLAS DE INTERFACES:");
+    for(int i = 0; i < list_size(interfaces); i++)
+    {
+        interfaz_t* interfaz = list_get(interfaces, i);
+        mostrar_pids_cola(interfaz->cola, interfaz->nombre);
+    }
+    log_info(logger_kernel, "COLAS DE RECURSOS:");
+    for(int i = 0; i < cantidad_recursos; i++)
+    {
+        mostrar_pids_cola(pcbs_recursos[i], recursos[i]);
+    }
+    log_info(logger_kernel, "NEW");
+    mostrar_pids_cola(pcbs_new, "NEW");
+    /*
+    log_info(logger_kernel, "EXIT");
+    mostrar_pids_cola(pcbs_exit, "EXIT");
+    */
 }

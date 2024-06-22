@@ -121,7 +121,7 @@ void get_config(t_config* config);
 int cantidadDeRecursos(char** instancias_string);
 extern void finalizar_proceso(proceso_t* proceso);
 extern void recibir_fin_de_sleep(interfaz_t* interfaz);
-extern void mostrar_pids_ready(t_list* ready_list, char* cola);
+extern void mostrar_pids_cola(t_list* ready_list, char* cola);
 extern uint32_t _get_pid(proceso_t* proceso);
 extern void finalizar_proceso_de_pid(uint32_t pid_proceso);
 extern uint32_t pid_a_finalizar;

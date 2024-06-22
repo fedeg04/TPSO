@@ -62,7 +62,7 @@ void volver_a_ready(proceso_t *proceso)
     {
         pthread_mutex_lock(&mutex_ready_list);
         list_add(pcbs_ready, proceso);
-        mostrar_pids_ready(pcbs_ready, "READY");
+        mostrar_pids_cola(pcbs_ready, "READY");
         pthread_mutex_unlock(&mutex_ready_list);
         // sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
@@ -71,7 +71,7 @@ void volver_a_ready(proceso_t *proceso)
     {
         pthread_mutex_lock(&mutex_ready_prioritario_list);
         list_add(pcbs_ready_prioritarios, proceso);
-        mostrar_pids_ready(pcbs_ready_prioritarios, "READY PRIORITARIO");
+        mostrar_pids_cola(pcbs_ready_prioritarios, "READY PRIORITARIO");
         pthread_mutex_unlock(&mutex_ready_prioritario_list);
         // sem_post(&pcb_esperando_exec);
         ingresar_a_exec();
