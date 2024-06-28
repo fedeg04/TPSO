@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     tablas_paginas_memoria = list_create();
     int cant_marcos = cantidad_marcos();
     char* bitarray = malloc((cant_marcos+7)/8);
-    memset(bitarray, 0, sizeof(bitarray));
+    memset(bitarray, 0, (cant_marcos+7)/8);
     bitarray_tabla = bitarray_create(bitarray,(cant_marcos+7)/8);
 
     

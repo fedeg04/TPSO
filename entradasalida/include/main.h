@@ -39,11 +39,10 @@ void enviar_pedido_stdout(uint32_t proceso_pid, uint32_t cant_paginas, char* dir
 void iniciar_fs();
 void iniciar_bloques();
 void iniciar_bitmap();
-void iniciar_metadata();
+void crear_archivo(char* nombre);
 FILE* f_bloques;
-FILE* bitmap;
+FILE* f_bitmap;
 t_bitarray* bitarray;
-t_list* archivos_metadata;
 
 
 

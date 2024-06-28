@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     logger_io = iniciar_logger("io.log", "I/O: ");
     log_info(logger_io, "%s", argv[2]); // ./bin/entradasalida "nombre" "unpath"
     //nombre = argv[1];
-    nombre = "fs1";
+    nombre = "int1";
     log_info(logger_io, "%s", nombre); 
     //t_config* config_io = iniciar_config(argv[2]);
     t_config* config_io = iniciar_config("dialfs.config");
@@ -174,7 +174,7 @@ void dialfs_atender_kernel() {
         recv(kernel_fd, &proceso_pid, sizeof(uint32_t), 0);
         uint32_t tam_archivo;
         recv(kernel_fd, &tam_archivo, sizeof(uint32_t), 0);
-        char* nombre_arch;
+        char* nombre_arch = malloc(tam_archivo+1);
         recv(kernel_fd, nombre_arch, tam_archivo, 0);
         switch(opcode) {
             case IO_FS_CREATE:
@@ -268,40 +268,60 @@ void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* dire
 void iniciar_fs() {
     iniciar_bloques();
     iniciar_bitmap();
-    iniciar_metadata();
 }
 
 void iniciar_bloques() {
-    string_append(&path_base_dialfs, "/bloques.dat");
-    f_bloques = fopen(path_base_dialfs, "r"); 
+    char* path = string_new();
+    string_append(&path, path_base_dialfs);
+    string_append(&path, "/bloques.dat");
+    f_bloques = fopen(path, "r+b"); 
     if(!f_bloques) {
-        f_bloques = fopen(path_base_dialfs, "wb");
+        f_bloques = fopen(path, "w+b");
         int fd = fileno(f_bloques);
         ftruncate(fd, block_size*block_count);
     }
+    fclose(f_bloques);
+    free(path);
 }
 
 void iniciar_bitmap() {
-    /*char* bitarray_string = malloc(block_count+7/8);
-    memset(bitarray_string, 0x00, sizeof(bitarray_string));
-    bitarray = bitarray_create(bitarray_string,block_count+7/8);*/
-    string_append(&path_base_dialfs, "/bitmap.dat");
-    f_bloques = fopen(path_base_dialfs, "r"); 
-    if(!f_bloques) {
-        f_bloques = fopen(path_base_dialfs, "wb");
-        int fd = fileno(f_bloques);
-        ftruncate(fd, block_count/8);
-        char *zero_buffer = calloc(block_count/8, sizeof(char));
-        fwrite(zero_buffer, sizeof(char), block_count/8, f_bloques);
+    char* path = string_new();
+    string_append(&path, path_base_dialfs);
+    string_append(&path, "/bitmap.dat");
+    f_bitmap = fopen(path, "r+b"); 
+    if(!f_bitmap) {
+        f_bitmap = fopen(path, "w+b");
+        int fd = fileno(f_bitmap);
+        ftruncate(fd, (block_count+7)/8);
+        char *zero_buffer = calloc((block_count+7)/8, sizeof(char));
+        fwrite(zero_buffer, sizeof(char), (block_count+7)/8, f_bitmap);
         free(zero_buffer);
     }
-    free(path_base_dialfs);
-}
-
-void iniciar_metadata() {
-    list_create(archivos_metadata);
+    fclose(f_bitmap);
+    free(path);
 }
 
 void crear_archivo(char* nombre) {
-
+    char* path = string_new();
+    string_append(&path, path_base_dialfs);
+    string_append(&path, "/");
+    string_append(&path, nombre);
+    FILE* f_metadata = fopen(path, "r+b");
+    if (!f_metadata) {   
+        f_metadata = fopen(path, "w+");
+        int bloque_libre = buscar_y_setear_bloque_libre();
+        char* bloque_libre_string = string_itoa(bloque_libre);
+        if(bloque_libre != -1) {        
+            char* metadata_contenido = string_new();
+            string_append(&metadata_contenido, "BLOQUE_INICIAL=");
+            string_append(&metadata_contenido, bloque_libre_string);
+            string_append(&metadata_contenido, "\n");
+            string_append(&metadata_contenido, "TAMANIO_ARCHIVO=0");
+            fwrite(metadata_contenido, sizeof(char), strlen(metadata_contenido), f_metadata);
+            free(bloque_libre_string);
+            free(metadata_contenido);
+        }
+    }
+    fclose(f_metadata);
+    free(path);
 }
