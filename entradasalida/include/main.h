@@ -27,6 +27,10 @@ int kernel_fd;
 int memoria_fd;
 int retraso_compactacion;
 char* nombre;
+FILE* f_bloques;
+FILE* f_bitmap;
+t_bitarray* bitarray;
+
 void conectar_a_kernel(char* nombre);
 void atender_pedidos_kernel();
 void generica_atender_kernel();
@@ -40,10 +44,11 @@ void iniciar_fs();
 void iniciar_bloques();
 void iniciar_bitmap();
 void crear_archivo(char* nombre);
-FILE* f_bloques;
-FILE* f_bitmap;
-t_bitarray* bitarray;
-
+int tamanio_archivo(char* nombre);
+void achicar_archivo(char* nombre, uint32_t tamanio_nuevo, int tamanio, int bloque_inicial);
+void path_para_archivo(char** path, char* nombre);
+int cant_bloques_archivo(int tamanio);
+void cambiar_tamanio_metadata(char* nombre, int tamanio);
 
 
 #endif
