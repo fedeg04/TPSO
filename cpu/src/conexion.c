@@ -243,7 +243,23 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
         case IO_FS_TRUNCATE:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
             registros_cpu->PC++;
-            enviar_contexto(socket, pcb, instruccion);
+            int tamanio = tercer_valor;
+            char** substring_truncate;
+            substring_truncate = string_split(instruccion, " ");
+            char* tercer_valor_string = string_itoa(tercer_valor);
+            
+            char* instruccion_truncate = string_new();
+            string_append(&instruccion_truncate, comando);
+            string_append(&instruccion_truncate, " ");
+            string_append(&instruccion_truncate, primer_parametro);
+            string_append(&instruccion_truncate, " ");
+            string_append(&instruccion_truncate, segundo_parametro);
+            string_append(&instruccion_truncate, " ");
+            string_append(&instruccion_truncate, tercer_valor_string);
+            enviar_contexto(socket, pcb, instruccion_truncate);
+            string_array_destroy(substring_truncate);
+            free(instruccion_truncate);
+            free(tercer_valor_string);
             return 0;
         case IO_FS_WRITE:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro, cuarto_parametro, quinto_parametro);

@@ -12,6 +12,7 @@
 #include <commons/collections/list.h>
 #include <commons/bitarray.h>
 #include <readline/readline.h>
+#include <dirent.h>
 
 t_log* logger_io;
 char* tipo_interfaz;
@@ -31,6 +32,12 @@ FILE* f_bloques;
 FILE* f_bitmap;
 t_bitarray* bitarray;
 
+typedef struct {
+    int bloque_inicial;
+    int tamanio;
+    char* nombre;
+} bloques_archivo_t;
+
 void conectar_a_kernel(char* nombre);
 void atender_pedidos_kernel();
 void generica_atender_kernel();
@@ -45,10 +52,16 @@ void iniciar_bloques();
 void iniciar_bitmap();
 void crear_archivo(char* nombre);
 int tamanio_archivo(char* nombre);
-void achicar_archivo(char* nombre, uint32_t tamanio_nuevo, int tamanio, int bloque_inicial);
+void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial, int agrandar);
 void path_para_archivo(char** path, char* nombre);
 int cant_bloques_archivo(int tamanio);
 void cambiar_tamanio_metadata(char* nombre, int tamanio);
-
+void leer_txt_y_agregar_a_lista(t_list* bloques_archivos);
+bool puede_agrandar_sin_compactar(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial);
+int compactar(char* nombre);
+void* leer_bloques_dat();
+void escribir_bloques_dat(void* bloques);
+void bloques_archivo_destroyer(bloques_archivo_t* bloques_archivo);
+t_bitarray* setear_bitarray();
 
 #endif

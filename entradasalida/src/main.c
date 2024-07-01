@@ -335,9 +335,10 @@ void truncar_archivo(char* nombre, uint32_t tamanio_nuevo) {
     free(path);
     if(tamanio_archivo(nombre) == tamanio_nuevo) {}
     if(tamanio_archivo(nombre) > tamanio_nuevo) {
-        achicar_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial);
-    } else {
-        agrandar_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial);
+        cambiar_tamanio_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial, 0); //Achicar
+    }
+    if(tamanio_archivo(nombre) < tamanio_nuevo) {
+        cambiar_tamanio_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial, 1); //Agrandar
     }
 }
 
@@ -357,15 +358,26 @@ void path_para_archivo(char** path, char* nombre) {
     string_append(path, nombre);
 }
 
-void achicar_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial) {
+void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial, int agrandar) {
     int cant_bloques_nuevos = cant_bloques_archivo(tamanio_nuevo);
     int cant_bloques_actuales = cant_bloques_archivo(tamanio);
-    int primer_bloque_a_eliminar = cant_bloques_nuevos + bloque_inicial;
-    int ultimo_bloque_a_eliminar = cant_bloques_actuales - 1;
+    int primer_bloque = cant_bloques_nuevos + bloque_inicial;
+    int ultimo_bloque = cant_bloques_actuales + bloque_inicial - 1;
+    if (agrandar) {
+        if (!puede_agrandar_sin_compactar(nombre, tamanio_nuevo, tamanio, bloque_inicial)) {
+            bloque_inicial = compactar(nombre);
+        }
+        primer_bloque = cant_bloques_actuales + bloque_inicial;
+        ultimo_bloque = cant_bloques_nuevos + cant_bloques_actuales + bloque_inicial -1;
+    }
     cambiar_tamanio_metadata(nombre, tamanio_nuevo);
     t_bitarray* bitarray = setear_bitarray();
-    for (int i = primer_bloque_a_eliminar; i <= ultimo_bloque_a_eliminar; i++) {
-        bitarray_clean_bit(bitarray, i);
+    for (int i = primer_bloque; i <= ultimo_bloque; i++) {
+        if(agrandar) {
+            bitarray_set_bit(bitarray, i);
+        } else {
+            bitarray_clean_bit(bitarray, i);
+        }
     }
     fseek(f_bitmap, 0, SEEK_SET);
     fwrite(bitarray->bitarray, sizeof(char), tamanio_archivo, f_bitmap);
@@ -374,9 +386,8 @@ void achicar_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_in
     bitarray_destroy(bitarray);  
 }
 
-
 int cant_bloques_archivo(int tamanio) {
-    return (tamanio + block_size - 1) / block_size;
+    return (tamanio + block_size) / block_size;
 }
 
 void cambiar_tamanio_metadata(char* nombre, int tamanio) {
@@ -388,13 +399,16 @@ void cambiar_tamanio_metadata(char* nombre, int tamanio) {
     free(path);
 }
 
-void agrandar_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial) {
-    if(puede_agrandar_sin_compactar(nombre, tamanio_nuevo, tamanio, bloque_inicial)) {
-
-    }
+void cambiar_bloque_inicial_metadata(char* nombre, int bloque_inicial) {
+    char* path = string_new();
+    path_para_archivo(&path, nombre);
+    t_config* config_metadata = config_create(path);
+    config_set_value(config_metadata, "BLOQUE_INICIAL", bloque_inicial);
+    config_destroy(config_metadata);
+    free(path);
 }
 
-void puede_agrandar_sin_compactar(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial) {
+bool puede_agrandar_sin_compactar(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial) {
     int cant_bloques_nuevos = cant_bloques_archivo(tamanio_nuevo);
     int cant_bloques_actuales = cant_bloques_archivo(tamanio);
     int bloques_a_verificar = cant_bloques_nuevos - cant_bloques_actuales;
@@ -424,4 +438,84 @@ t_bitarray* setear_bitarray() {
     t_bitarray* bitarray = bitarray_create(lectura_f_bloques,tamanio_archivo);
     free(path);
     return bitarray;
+}
+
+int compactar(char* nombre) {
+    t_list* bloques_archivos = list_create();
+    leer_txt_y_agregar_a_lista(bloques_archivos);
+    
+    bool mismo_nombre(bloques_archivo_t* bloques_archivo) {
+        return bloques_archivo->nombre == nombre;
+    }
+
+    bloques_archivo_t* archivo_a_agrandar = list_remove_by_condition(bloques_archivos, (void *)mismo_nombre);
+    list_add(bloques_archivos, archivo_a_agrandar);
+    void* bloques = leer_bloques_dat();
+    void* disco_aux = malloc(block_size*block_count);
+    int offset_escritura = 0;
+    int bloque_inicial;
+    for (int i = 0; i < list_size(bloques_archivos); i++) {
+        bloques_archivo_t* bloques_archivo = list_get(bloques_archivos, i);
+        int comienzo_lectura = bloques_archivo->bloque_inicial*block_size;
+        memcpy(disco_aux + offset_escritura, bloques + comienzo_lectura, bloques_archivo->tamanio);
+        cambiar_bloque_inicial_metadata(bloques_archivo->nombre, offset_escritura/block_size);
+        bloque_inicial = offset_escritura/block_size;
+        offset_escritura += cant_bloques_archivo(bloques_archivo->tamanio)*block_size;
+    }
+    bloques = disco_aux;
+    escribir_bloques_dat(bloques);
+    free(bloques);
+    list_destroy_and_destroy_elements(bloques_archivos, (void*)bloques_archivo_destroyer);
+    return bloque_inicial;
+}
+
+void bloques_archivo_destroyer(bloques_archivo_t* bloques_archivo) {
+    free(bloques_archivo->nombre);
+    free(bloques_archivo);
+}
+
+void leer_txt_y_agregar_a_lista(t_list* bloques_archivos) {
+    struct dirent *dir;
+    DIR *dp = opendir(path_base_dialfs);
+    while ((dir = readdir(dp))) {
+        if (dir->d_type == DT_REG) {
+            size_t len = strlen(dir->d_name);
+            if (len > 4 && strcmp(dir->d_name + len - 4, ".txt") == 0) {
+                bloques_archivo_t* bloques_archivo = malloc(sizeof(bloques_archivo_t));
+                t_config* config_metadata = config_create(dir->d_name);
+                int bloque_inicial = config_get_int_value(config_metadata, "BLOQUE_INICIAL");
+                int tamanio = config_get_int_value(config_metadata, "TAMANIO");
+                bloques_archivo->tamanio = tamanio;
+                bloques_archivo->bloque_inicial = bloque_inicial;
+                bloques_archivo->nombre = dir->d_name;
+                list_add(bloques_archivos, bloques_archivo);
+                config_destroy(config_metadata);
+            }
+        }
+    }
+    closedir(dp);
+}
+
+void* leer_bloques_dat() {
+    char* path = string_new();
+    path_para_archivo(&path, "bloques.dat");
+    f_bloques = fopen(path, "r+b");
+    size_t tamanio_archivo = block_count*block_size;
+    void* lectura_f_bloques = malloc(tamanio_archivo);
+    fseek(f_bloques, 0, SEEK_SET);
+    fread(lectura_f_bloques, sizeof(char), tamanio_archivo, f_bloques);
+    fclose(f_bloques);
+    free(path);
+    return lectura_f_bloques;
+}
+
+void escribir_bloques_dat(void* bloques) {
+    char* path = string_new();
+    path_para_archivo(&path, "bloques.dat");
+    f_bloques = fopen(path, "r+b");
+    size_t tamanio_archivo = block_count*block_size;
+    fseek(f_bloques, 0, SEEK_SET);
+    fwrite(bloques, sizeof(char), tamanio_archivo, f_bloques);
+    fclose(f_bloques);
+    free(path);
 }
