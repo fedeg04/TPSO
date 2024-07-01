@@ -55,7 +55,7 @@ int tamanio_archivo(char* nombre);
 void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial, int agrandar);
 void path_para_archivo(char** path, char* nombre);
 int cant_bloques_archivo(int tamanio);
-void cambiar_tamanio_metadata(char* nombre, int tamanio);
+void cambiar_metadata(char* nombre, int bloque_inicial, char* clave);
 void leer_txt_y_agregar_a_lista(t_list* bloques_archivos);
 bool puede_agrandar_sin_compactar(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial);
 int compactar(char* nombre);
@@ -63,5 +63,6 @@ void* leer_bloques_dat();
 void escribir_bloques_dat(void* bloques);
 void bloques_archivo_destroyer(bloques_archivo_t* bloques_archivo);
 t_bitarray* setear_bitarray();
+void compactar_bitarray(int ultimo_bloque);
 
 #endif

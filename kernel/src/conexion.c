@@ -89,6 +89,14 @@ void procesar_conexion(void *args_void)
             sem_post(&interfaz->sem_vuelta);
             free(nombre);
             break;
+        case FIN_DE_DIALFS:
+            recv(socket_cliente, &tam, sizeof(uint32_t), 0);
+            nombre = malloc(tam);
+            recv(socket_cliente, nombre, tam, 0);
+            interfaz = buscar_interfaz(nombre);
+            sem_post(&interfaz->sem_vuelta);
+            free(nombre);
+            break;
         default:
         }
     }

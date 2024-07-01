@@ -204,7 +204,10 @@ void dialfs_atender_kernel() {
                 recv(kernel_fd, dir_bytes_w, tam_archivo_dir_bytes_w, 0);
                 break;
             default:
+                break;
         }   
+        free(nombre_arch);
+        fin_de(FIN_DE_DIALFS);
     }
 }
 
@@ -359,18 +362,23 @@ void path_para_archivo(char** path, char* nombre) {
 }
 
 void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial, int agrandar) {
-    int cant_bloques_nuevos = cant_bloques_archivo(tamanio_nuevo);
+    int primer_bloque;
+    int ultimo_bloque;
     int cant_bloques_actuales = cant_bloques_archivo(tamanio);
-    int primer_bloque = cant_bloques_nuevos + bloque_inicial;
-    int ultimo_bloque = cant_bloques_actuales + bloque_inicial - 1;
+    int cant_bloques_restantes = cant_bloques_archivo(tamanio_nuevo);
+    if (!agrandar) {
+        primer_bloque = cant_bloques_restantes + bloque_inicial;
+        ultimo_bloque = cant_bloques_actuales + bloque_inicial - 1;
+    }
     if (agrandar) {
+        int cant_bloques_nuevos = cant_bloques_restantes - cant_bloques_actuales;
         if (!puede_agrandar_sin_compactar(nombre, tamanio_nuevo, tamanio, bloque_inicial)) {
             bloque_inicial = compactar(nombre);
         }
         primer_bloque = cant_bloques_actuales + bloque_inicial;
         ultimo_bloque = cant_bloques_nuevos + cant_bloques_actuales + bloque_inicial -1;
     }
-    cambiar_tamanio_metadata(nombre, tamanio_nuevo);
+    cambiar_metadata(nombre, tamanio_nuevo, "TAMANIO_ARCHIVO");
     t_bitarray* bitarray = setear_bitarray();
     for (int i = primer_bloque; i <= ultimo_bloque; i++) {
         if(agrandar) {
@@ -380,32 +388,51 @@ void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int b
         }
     }
     fseek(f_bitmap, 0, SEEK_SET);
-    fwrite(bitarray->bitarray, sizeof(char), tamanio_archivo, f_bitmap);
+    fwrite(bitarray->bitarray, sizeof(char), (block_count+7)/8, f_bitmap);
     free(bitarray->bitarray);
     fclose(f_bitmap);
     bitarray_destroy(bitarray);  
 }
 
 int cant_bloques_archivo(int tamanio) {
-    return (tamanio + block_size) / block_size;
+    if(!tamanio) return 1;
+    return (tamanio + block_size - 1) / block_size;
 }
 
-void cambiar_tamanio_metadata(char* nombre, int tamanio) {
+void cambiar_metadata(char* nombre, int bloque_inicial, char* clave) {
     char* path = string_new();
     path_para_archivo(&path, nombre);
-    t_config* config_metadata = config_create(path);
-    config_set_value(config_metadata, "TAMANIO_ARCHIVO", tamanio);
-    config_destroy(config_metadata);
-    free(path);
-}
+    char* bloque_string = string_itoa(bloque_inicial);
 
-void cambiar_bloque_inicial_metadata(char* nombre, int bloque_inicial) {
-    char* path = string_new();
-    path_para_archivo(&path, nombre);
-    t_config* config_metadata = config_create(path);
-    config_set_value(config_metadata, "BLOQUE_INICIAL", bloque_inicial);
-    config_destroy(config_metadata);
+    FILE *file = fopen(path, "r");
+    fseek(file, 0, SEEK_END);
+    size_t file_size = ftell(file);
+    char *file_content = malloc(file_size + 1);
+    file_content[file_size] = '\0';
+    rewind(file);
+    fread(file_content, 1, file_size, file);
+    fclose(file);
+    char *key_position = strstr(file_content, clave);
+    char *value_position = strchr(key_position, '=') + 1;
+    char *end_of_line = strchr(value_position, '\n');
+    if (end_of_line == NULL) {
+        end_of_line = file_content + strlen(file_content);
+    }
+    size_t new_length = strlen(file_content) + strlen(bloque_string) - (end_of_line - value_position);
+    char *new_content = (char *)malloc(new_length + 1);
+    size_t prefix_length = value_position - file_content;
+    strncpy(new_content, file_content, prefix_length);
+    new_content[prefix_length] = '\0';
+    strcat(new_content, bloque_string);
+    strcat(new_content, end_of_line);
+    free(file_content);
+    file_content = new_content;
+    file = fopen(path, "w");
+    fwrite(file_content, 1, strlen(file_content), file);
+    fclose(file);
+    free(file_content);
     free(path);
+    free(bloque_string);
 }
 
 bool puede_agrandar_sin_compactar(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial) {
@@ -416,7 +443,7 @@ bool puede_agrandar_sin_compactar(char* nombre, int tamanio_nuevo, int tamanio, 
     t_bitarray* bitarray = setear_bitarray();
     fclose(f_bitmap);
     for (int i = primer_bloque_a_verificar; i < primer_bloque_a_verificar + bloques_a_verificar; i++) {
-        if (!bitarray_test_bit(bitarray, i)) {
+        if (bitarray_test_bit(bitarray, i)) {
             free(bitarray->bitarray);
             bitarray_destroy(bitarray);
             return false;
@@ -434,7 +461,7 @@ t_bitarray* setear_bitarray() {
     size_t tamanio_archivo = (block_count+7)/8;
     char* lectura_f_bloques = malloc(tamanio_archivo);
     fseek(f_bitmap, 0, SEEK_SET);
-    fread(lectura_f_bloques, sizeof(char), tamanio_archivo, f_bitmap);
+    fread(lectura_f_bloques, tamanio_archivo, sizeof(char), f_bitmap);
     t_bitarray* bitarray = bitarray_create(lectura_f_bloques,tamanio_archivo);
     free(path);
     return bitarray;
@@ -445,28 +472,50 @@ int compactar(char* nombre) {
     leer_txt_y_agregar_a_lista(bloques_archivos);
     
     bool mismo_nombre(bloques_archivo_t* bloques_archivo) {
-        return bloques_archivo->nombre == nombre;
+        return !strcmp(bloques_archivo->nombre, nombre);
     }
 
     bloques_archivo_t* archivo_a_agrandar = list_remove_by_condition(bloques_archivos, (void *)mismo_nombre);
     list_add(bloques_archivos, archivo_a_agrandar);
     void* bloques = leer_bloques_dat();
     void* disco_aux = malloc(block_size*block_count);
+    memset(disco_aux, 0, block_size * block_count);
     int offset_escritura = 0;
     int bloque_inicial;
     for (int i = 0; i < list_size(bloques_archivos); i++) {
         bloques_archivo_t* bloques_archivo = list_get(bloques_archivos, i);
         int comienzo_lectura = bloques_archivo->bloque_inicial*block_size;
         memcpy(disco_aux + offset_escritura, bloques + comienzo_lectura, bloques_archivo->tamanio);
-        cambiar_bloque_inicial_metadata(bloques_archivo->nombre, offset_escritura/block_size);
+        cambiar_metadata(bloques_archivo->nombre, offset_escritura/block_size, "BLOQUE_INICIAL");
         bloque_inicial = offset_escritura/block_size;
         offset_escritura += cant_bloques_archivo(bloques_archivo->tamanio)*block_size;
     }
-    bloques = disco_aux;
-    escribir_bloques_dat(bloques);
     free(bloques);
+    int bloque_final = bloque_inicial + cant_bloques_archivo(archivo_a_agrandar->tamanio) - 1;
+    escribir_bloques_dat(disco_aux);
+    compactar_bitarray(bloque_final);
+    free(disco_aux);
     list_destroy_and_destroy_elements(bloques_archivos, (void*)bloques_archivo_destroyer);
     return bloque_inicial;
+}
+
+void compactar_bitarray(int ultimo_bloque) {
+    int tamanio = (block_count+7)/8;
+    char* ceros = malloc(tamanio);
+    memset(ceros, 0, tamanio);
+    t_bitarray* bitarray = bitarray_create(ceros, tamanio);
+    for (int i = 0; i <= ultimo_bloque; i++) {
+        bitarray_set_bit(bitarray, i);
+    }
+    char* path = string_new();
+    path_para_archivo(&path, "bitmap.dat");
+    f_bitmap = fopen(path, "r+b");
+    fseek(f_bitmap, 0, SEEK_SET);
+    fwrite(bitarray->bitarray, sizeof(char), tamanio, f_bitmap);
+    free(ceros);
+    free(path);
+    bitarray_destroy(bitarray);
+    fclose(f_bitmap);
 }
 
 void bloques_archivo_destroyer(bloques_archivo_t* bloques_archivo) {
@@ -481,15 +530,20 @@ void leer_txt_y_agregar_a_lista(t_list* bloques_archivos) {
         if (dir->d_type == DT_REG) {
             size_t len = strlen(dir->d_name);
             if (len > 4 && strcmp(dir->d_name + len - 4, ".txt") == 0) {
+                char* nombre = string_new();
+                string_append(&nombre, dir->d_name);
                 bloques_archivo_t* bloques_archivo = malloc(sizeof(bloques_archivo_t));
-                t_config* config_metadata = config_create(dir->d_name);
+                char* path = string_new();
+                path_para_archivo(&path, dir->d_name);
+                t_config* config_metadata = config_create(path);
                 int bloque_inicial = config_get_int_value(config_metadata, "BLOQUE_INICIAL");
-                int tamanio = config_get_int_value(config_metadata, "TAMANIO");
+                int tamanio = config_get_int_value(config_metadata, "TAMANIO_ARCHIVO");
                 bloques_archivo->tamanio = tamanio;
                 bloques_archivo->bloque_inicial = bloque_inicial;
-                bloques_archivo->nombre = dir->d_name;
+                bloques_archivo->nombre = nombre;
                 list_add(bloques_archivos, bloques_archivo);
                 config_destroy(config_metadata);
+                free(path);
             }
         }
     }
@@ -513,9 +567,8 @@ void escribir_bloques_dat(void* bloques) {
     char* path = string_new();
     path_para_archivo(&path, "bloques.dat");
     f_bloques = fopen(path, "r+b");
-    size_t tamanio_archivo = block_count*block_size;
     fseek(f_bloques, 0, SEEK_SET);
-    fwrite(bloques, sizeof(char), tamanio_archivo, f_bloques);
+    fwrite(bloques, sizeof(char), block_count*block_size, f_bloques);
     fclose(f_bloques);
     free(path);
 }
