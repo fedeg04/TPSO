@@ -139,6 +139,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             uint8_t cant_paginas = cantidad_paginas_enviar(cantidad_bytes_in, segundo_valor);
             uint32_t lectura = enviar_mov_in(cant_paginas, pcb->pid, cantidad_bytes_in, desplazamiento_direccion_logica(segundo_valor), pagina_direccion_logica(segundo_valor), logger);
             set_registros(primer_parametro, lectura);
+            log_info(logger, "Valor Leido: %d", lectura);
             return 1;
         case MOV_OUT:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
@@ -675,6 +676,9 @@ void envio_kernel_io_fs(op_code opcode, char* interfaz, uint8_t cant_paginas, ui
     string_append(&io_fs_a_kernel, nombre_archivo);
     string_append(&io_fs_a_kernel, " ");
     string_append(&io_fs_a_kernel, puntero_string);
+    string_append(&io_fs_a_kernel, " ");
+    char* tamanio_string = string_itoa(tamanio);
+    string_append(&io_fs_a_kernel, tamanio_string);
     char* envio_direcciones_tamanios = generar_envio_direcciones_tamanios(cant_paginas, tamanio, desplazamiento, nro_pagina, pcb->pid, logger);
     string_append(&io_fs_a_kernel, " ");
     string_append(&io_fs_a_kernel, envio_direcciones_tamanios);
@@ -682,6 +686,8 @@ void envio_kernel_io_fs(op_code opcode, char* interfaz, uint8_t cant_paginas, ui
     enviar_contexto(socket, pcb, io_fs_a_kernel);
     free(io_fs_a_kernel);
     free(envio_direcciones_tamanios);
+    free(puntero_string);
+    free(tamanio_string);
 }
 
 void leer_string(char* lectura, uint8_t cant_pags, uint16_t desplazamiento, uint32_t pid, int cant_bytes, uint32_t nro_pagina, t_log* logger) {

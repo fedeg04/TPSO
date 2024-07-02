@@ -369,7 +369,9 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         proceso_interfaz->interfaz = substrings[1];
         proceso_interfaz->nombre_archivo = substrings[2];
         proceso_interfaz->registro_puntero = atoi(substrings[3]);
-        proceso_interfaz->direcciones_bytes = substrings[4];
+        proceso_interfaz->registro_tamanio = atoi(substrings[4]);
+        proceso_interfaz->cant_paginas = atoi(substrings[5]);
+        proceso_interfaz->direcciones_bytes = substrings[6];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
         enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_write);
@@ -378,7 +380,9 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         proceso_interfaz->interfaz = substrings[1];
         proceso_interfaz->nombre_archivo = substrings[2];
         proceso_interfaz->registro_puntero = atoi(substrings[3]);
-        proceso_interfaz->direcciones_bytes = substrings[4];
+        proceso_interfaz->registro_tamanio = atoi(substrings[4]);
+        proceso_interfaz->cant_paginas = atoi(substrings[5]);
+        proceso_interfaz->direcciones_bytes = substrings[6];
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <BLOCKED>", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Bloqueado por: <%s>", proceso->pid, proceso_interfaz->interfaz);
         enviar_proceso_a_interfaz(proceso_interfaz, "DIALFS", hacer_io_fs_read);

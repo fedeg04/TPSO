@@ -337,9 +337,10 @@ void hacer_io_gen_sleep(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
         pthread_mutex_lock(&interfaz->mutex_cola);
         list_get(interfaz->cola, 0);
         pthread_mutex_unlock(&interfaz->mutex_cola);
-        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t));
+        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t) + sizeof(uint32_t));
         int offset = 0;
         agregar_opcode(stream, &offset, IO_GEN_SLEEP);
+        agregar_uint32_t(stream, &offset, pid_proceso);
         agregar_uint32_t(stream, &offset, uni_de_trabajo);
         int socket_generica = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
         send(socket_generica, stream, offset, 0);
@@ -535,8 +536,10 @@ void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inter
     proceso_t *proceso = proceso_interfaz->proceso;
     char* nombre_archivo = proceso_interfaz->nombre_archivo;
     uint32_t registro_puntero = proceso_interfaz->registro_puntero;
+    uint32_t cant_paginas = proceso_interfaz->cant_paginas;
     char* direcciones_bytes = proceso_interfaz->direcciones_bytes;
     uint32_t pid_proceso = proceso->pid;
+    uint32_t tamanio = proceso_interfaz->registro_tamanio;
     bool _pids_iguales(uint32_t pid)
     {
         return pids_iguales(pid, pid_proceso);
@@ -550,12 +553,14 @@ void hacer_io_fs_write(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inter
         pthread_mutex_lock(&interfaz->mutex_cola);
         list_get(interfaz->cola, 0);
         pthread_mutex_unlock(&interfaz->mutex_cola);
-        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t)* 4 + strlen(nombre_archivo) + 2 + strlen(direcciones_bytes));
+        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t)* 6 + strlen(nombre_archivo) + 2 + strlen(direcciones_bytes));
         int offset = 0;
         agregar_opcode(stream, &offset, IO_FS_WRITE);
         agregar_uint32_t(stream, &offset, proceso->pid);
         agregar_string(stream, &offset, nombre_archivo);
-        agregar_uint32_t(stream, &offset, registro_puntero);
+        agregar_uint32_t(stream, &offset, registro_puntero);       
+        agregar_uint32_t(stream, &offset, tamanio);
+        agregar_uint32_t(stream, &offset, cant_paginas);
         agregar_string(stream, &offset, direcciones_bytes);
         int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
         send(socket_dialfs, stream, offset, 0);
@@ -574,8 +579,10 @@ void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interf
     proceso_t *proceso = proceso_interfaz->proceso;
     char* nombre_archivo = proceso_interfaz->nombre_archivo;
     uint32_t registro_puntero = proceso_interfaz->registro_puntero;
+    uint32_t cant_paginas = proceso_interfaz->cant_paginas;
     char* direcciones_bytes = proceso_interfaz->direcciones_bytes;
     uint32_t pid_proceso = proceso->pid;
+    uint32_t tamanio = proceso_interfaz->registro_tamanio;
     bool _pids_iguales(uint32_t pid)
     {
         return pids_iguales(pid, pid_proceso);
@@ -589,12 +596,14 @@ void hacer_io_fs_read(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interf
         pthread_mutex_lock(&interfaz->mutex_cola);
         list_get(interfaz->cola, 0);
         pthread_mutex_unlock(&interfaz->mutex_cola);
-        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t)* 4 + strlen(nombre_archivo) + 2 + strlen(direcciones_bytes));
+        void *stream = malloc(sizeof(op_code) + sizeof(uint32_t)* 6 + strlen(nombre_archivo) + 2 + strlen(direcciones_bytes));
         int offset = 0;
         agregar_opcode(stream, &offset, IO_FS_READ);
         agregar_uint32_t(stream, &offset, proceso->pid);
         agregar_string(stream, &offset, nombre_archivo);
         agregar_uint32_t(stream, &offset, registro_puntero);
+        agregar_uint32_t(stream, &offset, tamanio);
+        agregar_uint32_t(stream, &offset, cant_paginas);
         agregar_string(stream, &offset, direcciones_bytes);
         int socket_dialfs = (int)dictionary_get(diccionario_interfaces, interfaz->nombre);
         send(socket_dialfs, stream, offset, 0);

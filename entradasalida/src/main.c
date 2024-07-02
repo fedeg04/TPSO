@@ -90,13 +90,12 @@ void generica_atender_kernel() {
         recv(kernel_fd, &opcode, sizeof(op_code), 0);
         switch(opcode) {
             case IO_GEN_SLEEP:
+            uint32_t pid;
+            recv(kernel_fd, &pid, sizeof(uint32_t), 0);
             uint32_t unis_de_trabajo;
             recv(kernel_fd, &unis_de_trabajo, sizeof(uint32_t), 0);
-            log_info(logger_io, "TIEMPO UNI: %d", tiempo_unidad_trabajo);
-            log_info(logger_io, "UNIS: %d", unis_de_trabajo);
-            log_info(logger_io, "TOTAL: %d", unis_de_trabajo * tiempo_unidad_trabajo);
+            log_info(logger_io, "PID: <%d> - Operacion: <IO_GEN_SLEEP %d>", pid, unis_de_trabajo);
             usleep(tiempo_unidad_trabajo * unis_de_trabajo * 1000);
-            log_info(logger_io, "LLegue sleep");
             fin_de(FIN_DE_SLEEP);
                 break;
             default:
@@ -118,6 +117,7 @@ void stdin_atender_kernel() {
                 recv(kernel_fd, &tamanio_string, sizeof(uint32_t), 0);
                 char* direcciones_bytes = malloc(tamanio_string);
                 recv(kernel_fd, direcciones_bytes, tamanio_string, 0);
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_STDIN_READ>", proceso_pid);
                 char* leido = readline("> ");
                 enviar_pedido_stdin(proceso_pid, cant_paginas, direcciones_bytes, leido);
                 for(int i=0; i < cant_paginas; i++) {
@@ -141,22 +141,14 @@ void stdout_atender_kernel() {
                 uint32_t cant_paginas;
                 uint32_t tamanio_string;
                 recv(kernel_fd, &proceso_pid, sizeof(uint32_t), 0);
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_STDIN_WRITE>", proceso_pid);
                 recv(kernel_fd, &cant_paginas, sizeof(uint32_t), 0);
                 recv(kernel_fd, &tamanio_string, sizeof(uint32_t), 0);
                 char* direcciones_bytes = malloc(tamanio_string);
                 recv(kernel_fd, direcciones_bytes, tamanio_string, 0);
-                enviar_pedido_stdout(proceso_pid, cant_paginas, direcciones_bytes);
+                enviar_lectura_memoria(proceso_pid, cant_paginas, direcciones_bytes);
                 char* resultado = string_new();
-                for(int i = 0; i < cant_paginas; i++){
-                    uint16_t tam;
-                    char* string_recv;
-                    recv(memoria_fd, &tam, sizeof(uint16_t), 0);
-                    string_recv = malloc(tam + 1);
-                    recv(memoria_fd, string_recv, tam, 0);
-                    string_recv[tam] = '\0';
-                    string_append(&resultado, string_recv);  
-                    free(string_recv);
-                }
+                recibir_lectura_memoria(cant_paginas, &resultado);
                 log_info(logger_io, "RESULTADO: %s", resultado);
                 free(resultado);
                 fin_de(FIN_DE_STDOUT);
@@ -168,40 +160,59 @@ void stdout_atender_kernel() {
 
 void dialfs_atender_kernel() {
      while(1) {
+        uint32_t tamanio = 0;
         op_code opcode;
         recv(kernel_fd, &opcode, sizeof(op_code), 0);
         uint32_t proceso_pid;
         recv(kernel_fd, &proceso_pid, sizeof(uint32_t), 0);
         uint32_t tam_archivo;
         recv(kernel_fd, &tam_archivo, sizeof(uint32_t), 0);
-        char* nombre_arch = malloc(tam_archivo+1);
+        char* nombre_arch = malloc(tam_archivo);
         recv(kernel_fd, nombre_arch, tam_archivo, 0);
         switch(opcode) {
             case IO_FS_CREATE:
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_FS_CREATE>", proceso_pid);
+                log_info(logger_io, "PID: <%d> - Crear Archivo: <%s>", proceso_pid, nombre_arch);
                 crear_archivo(nombre_arch);
                 break;
             case IO_FS_DELETE:
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_FS_DELETE>", proceso_pid);
+                log_info(logger_io, "PID: <%d> - Eliminar Archivo: <%s>", proceso_pid, nombre_arch);
+                eliminar_archivo(nombre_arch, proceso_pid);
                 break;
             case IO_FS_TRUNCATE:
-                uint32_t tamanio;
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_FS_TRUNCATE>", proceso_pid);
                 recv(kernel_fd, &tamanio, sizeof(uint32_t), 0);
-                truncar_archivo(nombre_arch, tamanio);
+                log_info(logger_io, "PID: <%d> - Truncar Archivo: <%s> - Tamaño: <%d>", proceso_pid, nombre_arch, tamanio);
+                truncar_archivo(nombre_arch, tamanio, proceso_pid);
                 break;
             case IO_FS_READ:
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_FS_READ>", proceso_pid);
                 uint32_t puntero_r;
                 recv(kernel_fd, &puntero_r, sizeof(uint32_t), 0);
+                recv(kernel_fd, &tamanio, sizeof(uint32_t), 0);
+                log_info(logger_io, "PID: <%d> - Leer Archivo: <%s> - Tamaño a Leer: <%d> - Puntero Archivo: <%u>", proceso_pid, nombre_arch, tamanio, puntero_r);
+                uint32_t cant_paginas_r;
+                recv(kernel_fd, &cant_paginas_r, sizeof(uint32_t), 0);
                 uint32_t tam_archivo_dir_bytes_r;
                 recv(kernel_fd, &tam_archivo_dir_bytes_r, sizeof(uint32_t), 0);
-                char* dir_bytes_r;
+                char* dir_bytes_r = malloc(tam_archivo_dir_bytes_r);
                 recv(kernel_fd, dir_bytes_r, tam_archivo_dir_bytes_r, 0);
+                leer_archivo(nombre_arch, puntero_r, cant_paginas_r, dir_bytes_r, proceso_pid);
                 break;
             case IO_FS_WRITE:
+                log_info(logger_io, "PID: <%d> - Operacion: <IO_FS_WRITE>", proceso_pid);
                 uint32_t puntero_w;
                 recv(kernel_fd, &puntero_w, sizeof(uint32_t), 0);
+                recv(kernel_fd, &tamanio, sizeof(uint32_t), 0);
+                log_info(logger_io, "PID: <%d> - Escribir Archivo: <%s> - Tamaño a Escribir: <%d> - Puntero Archivo: <%d>", proceso_pid, nombre_arch, tamanio, puntero_w);
+                uint32_t cant_paginas_w;
+                recv(kernel_fd, &cant_paginas_w, sizeof(uint32_t), 0);
                 uint32_t tam_archivo_dir_bytes_w;
                 recv(kernel_fd, &tam_archivo_dir_bytes_w, sizeof(uint32_t), 0);
-                char* dir_bytes_w;
+                char* dir_bytes_w = malloc(tam_archivo_dir_bytes_w);
                 recv(kernel_fd, dir_bytes_w, tam_archivo_dir_bytes_w, 0);
+                escribir_archivo(nombre_arch, puntero_w, cant_paginas_w, dir_bytes_w, proceso_pid);
                 break;
             default:
                 break;
@@ -221,14 +232,14 @@ void fin_de(op_code opcode) {
     free(stream);
 }
 
-void enviar_pedido_stdout(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes) {
+void enviar_lectura_memoria(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes) {
     char** substrings = string_split(direcciones_bytes, "-");
     uint16_t direccion;
     uint16_t bytes;
     for(int i = 0; i < cant_paginas * 2; i+=2) {
         void* stream = malloc(sizeof(op_code) + 3 * sizeof(uint32_t));
         int offset = 0;
-        agregar_opcode(stream, &offset, LEER); // LEER en vez de IO_STDOUT_WRITE
+        agregar_opcode(stream, &offset, LEER);
         agregar_uint32_t(stream, &offset, proceso_pid);
         direccion = atoi(substrings[i]); 
         bytes = atoi(substrings[i+1]);
@@ -239,6 +250,19 @@ void enviar_pedido_stdout(uint32_t proceso_pid, uint32_t cant_paginas, char* dir
      }   
     free(direcciones_bytes);
     string_array_destroy(substrings);
+}
+
+void recibir_lectura_memoria(int cant_paginas, char** resultado) {
+    for(int i = 0; i < cant_paginas; i++) {
+        uint16_t tam;
+        char* string_recv;
+        recv(memoria_fd, &tam, sizeof(uint16_t), 0);
+        string_recv = malloc(tam + 1);
+        recv(memoria_fd, string_recv, tam, 0);
+        string_recv[tam] = '\0';
+        string_append(resultado, string_recv);  
+        free(string_recv);
+    }
 }
 
 void enviar_pedido_stdin(uint32_t proceso_pid, uint32_t cant_paginas, char* direcciones_bytes, char* leido) {
@@ -328,31 +352,26 @@ void crear_archivo(char* nombre) {
     free(path);
 }
 
-void truncar_archivo(char* nombre, uint32_t tamanio_nuevo) {
-    char* path = string_new();
-    path_para_archivo(&path, nombre);
-    t_config* config_metadata = config_create(path);
-    int tamanio = config_get_int_value(config_metadata, "TAMANIO_ARCHIVO");
-    int bloque_inicial = config_get_int_value(config_metadata, "BLOQUE_INICIAL");
-    config_destroy(config_metadata);
-    free(path);
-    if(tamanio_archivo(nombre) == tamanio_nuevo) {}
-    if(tamanio_archivo(nombre) > tamanio_nuevo) {
-        cambiar_tamanio_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial, 0); //Achicar
+void truncar_archivo(char* nombre, uint32_t tamanio_nuevo, uint32_t pid) {
+    int tamanio = valor_metadata(nombre, "TAMANIO_ARCHIVO");
+    int bloque_inicial = valor_metadata(nombre, "BLOQUE_INICIAL");
+    if(tamanio == tamanio_nuevo) {}
+    if(tamanio > tamanio_nuevo) {
+        cambiar_tamanio_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial, 0, pid); //Achicar
     }
-    if(tamanio_archivo(nombre) < tamanio_nuevo) {
-        cambiar_tamanio_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial, 1); //Agrandar
+    if(tamanio < tamanio_nuevo) {
+        cambiar_tamanio_archivo(nombre, tamanio_nuevo, tamanio, bloque_inicial, 1, pid); //Agrandar
     }
 }
 
-int tamanio_archivo(char* nombre) {
+int valor_metadata(char* nombre, char* clave) {
     char* path = string_new();
     path_para_archivo(&path, nombre);
     t_config* config_metadata = config_create(path);
-    int tamanio = config_get_int_value(config_metadata, "TAMANIO_ARCHIVO");
+    int bloque_inicial = config_get_int_value(config_metadata, clave);
     config_destroy(config_metadata);
     free(path);
-    return tamanio;
+    return bloque_inicial;
 }
 
 void path_para_archivo(char** path, char* nombre) {
@@ -361,7 +380,7 @@ void path_para_archivo(char** path, char* nombre) {
     string_append(path, nombre);
 }
 
-void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial, int agrandar) {
+void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int bloque_inicial, int agrandar, uint32_t pid) {
     int primer_bloque;
     int ultimo_bloque;
     int cant_bloques_actuales = cant_bloques_archivo(tamanio);
@@ -373,7 +392,10 @@ void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int b
     if (agrandar) {
         int cant_bloques_nuevos = cant_bloques_restantes - cant_bloques_actuales;
         if (!puede_agrandar_sin_compactar(nombre, tamanio_nuevo, tamanio, bloque_inicial)) {
+            log_info(logger_io, "PID: <%d> - Inicio Compactación.", pid);
             bloque_inicial = compactar(nombre);
+            log_info(logger_io, "PID: <%d> - Fin Compactación.", pid);
+            usleep(retraso_compactacion*1000);
         }
         primer_bloque = cant_bloques_actuales + bloque_inicial;
         ultimo_bloque = cant_bloques_nuevos + cant_bloques_actuales + bloque_inicial -1;
@@ -396,6 +418,7 @@ void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int b
 
 int cant_bloques_archivo(int tamanio) {
     if(!tamanio) return 1;
+    if(tamanio == -1) return 0;
     return (tamanio + block_size - 1) / block_size;
 }
 
@@ -571,4 +594,57 @@ void escribir_bloques_dat(void* bloques) {
     fwrite(bloques, sizeof(char), block_count*block_size, f_bloques);
     fclose(f_bloques);
     free(path);
+}
+
+void eliminar_archivo(char* nombre, uint32_t pid) {
+    cambiar_tamanio_archivo(nombre, -1, valor_metadata(nombre, "TAMANIO_ARCHIVO"), valor_metadata(nombre, "BLOQUE_INICIAL"), 0, pid);
+    char* path = string_new();
+    path_para_archivo(&path, nombre);
+    remove(path);
+    free(path);
+}
+
+void escribir_archivo(char* nombre_arch, uint32_t puntero, uint32_t cant_paginas, char* direcciones_bytes, uint32_t pid) {
+    log_info(logger_io, "El string que llega: %s", direcciones_bytes);
+    char* string_a_escribir = string_new();
+    enviar_lectura_memoria(pid, cant_paginas, direcciones_bytes);
+    recibir_lectura_memoria(cant_paginas, &string_a_escribir);
+    log_info(logger_io, "RESULTADO: %s", string_a_escribir);
+    int bloque_inicial = valor_metadata(nombre_arch, "BLOQUE_INICIAL");
+    void* bloques = leer_bloques_dat();
+    memcpy(bloques + bloque_inicial + puntero, string_a_escribir, strlen(string_a_escribir));
+    escribir_bloques_dat(bloques);
+    free(bloques);
+    free(string_a_escribir);
+}
+
+void leer_archivo(char* nombre_arch, uint32_t puntero, int cant_paginas, char* direcciones_bytes, uint32_t pid) {
+    int bloque_inicial = valor_metadata(nombre_arch, "BLOQUE_INICIAL");
+    void* bloques = leer_bloques_dat();
+    char** substrings = string_split(direcciones_bytes, "-");
+    for (int i = 0; i < cant_paginas*2; i=i+2) {
+        uint32_t tamanio = (uint32_t)atoi(substrings[i+1]);
+        char* parte_a_escribir = malloc(tamanio + 1);
+        memcpy(parte_a_escribir, bloques + bloque_inicial + puntero, tamanio);
+        parte_a_escribir[tamanio] = '\0';
+        log_info(logger_io, "Parte a escribir: %s", parte_a_escribir);
+        uint32_t direccion = (uint32_t)atoi(substrings[i]);
+        escribir_memoria(direccion, tamanio, parte_a_escribir, pid);
+        puntero += tamanio;
+        free(parte_a_escribir);
+    }
+    free(direcciones_bytes);
+    string_array_destroy(substrings);
+    free(bloques);
+}
+
+void escribir_memoria(uint32_t direccion, uint32_t tamanio, char* parte_a_escribir, uint32_t pid) {
+    void* stream = malloc(sizeof(op_code) + sizeof(uint32_t) + 2 * sizeof(uint16_t) + tamanio);
+    int offset = 0;
+    agregar_opcode(stream, &offset, ESCRIBIR);
+    agregar_uint32_t(stream, &offset, pid);
+    agregar_uint16_t(stream, &offset, direccion);
+    agregar_string_sin_barra0(stream, &offset, parte_a_escribir);
+    send(memoria_fd, stream, offset, 0);
+    free(stream);
 }
