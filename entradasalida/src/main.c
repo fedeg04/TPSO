@@ -32,11 +32,11 @@ void get_config(t_config* config)
 int main(int argc, char* argv[]) {
     logger_io = iniciar_logger("io.log", "I/O: ");
     log_info(logger_io, "%s", argv[2]); // ./bin/entradasalida "nombre" "unpath"
-    //nombre = argv[1];
-    nombre = "int1";
+    nombre = argv[1];
+    //nombre = "int1";
     log_info(logger_io, "%s", nombre); 
-    //t_config* config_io = iniciar_config(argv[2]);
-    t_config* config_io = iniciar_config("dialfs.config");
+    t_config* config_io = iniciar_config(argv[2]);
+    //t_config* config_io = iniciar_config("dialfs.config");
     get_config(config_io);
 
     controlar_seniales(logger_io);
@@ -149,7 +149,7 @@ void stdout_atender_kernel() {
                 enviar_lectura_memoria(proceso_pid, cant_paginas, direcciones_bytes);
                 char* resultado = string_new();
                 recibir_lectura_memoria(cant_paginas, &resultado);
-                log_info(logger_io, "RESULTADO: %s", resultado);
+                log_info(logger_io, "%s", resultado);
                 free(resultado);
                 fin_de(FIN_DE_STDOUT);
                 break;
@@ -228,7 +228,6 @@ void fin_de(op_code opcode) {
     agregar_opcode(stream, &offset, opcode);
     agregar_string(stream, &offset, nombre);
     send(kernel_fd, stream, offset, 0);
-    log_info(logger_io, "STREAM: %d", *((int*) stream));
     free(stream);
 }
 
@@ -609,7 +608,6 @@ void escribir_archivo(char* nombre_arch, uint32_t puntero, uint32_t cant_paginas
     char* string_a_escribir = string_new();
     enviar_lectura_memoria(pid, cant_paginas, direcciones_bytes);
     recibir_lectura_memoria(cant_paginas, &string_a_escribir);
-    log_info(logger_io, "RESULTADO: %s", string_a_escribir);
     int bloque_inicial = valor_metadata(nombre_arch, "BLOQUE_INICIAL");
     void* bloques = leer_bloques_dat();
     memcpy(bloques + bloque_inicial + puntero, string_a_escribir, strlen(string_a_escribir));
@@ -627,7 +625,6 @@ void leer_archivo(char* nombre_arch, uint32_t puntero, int cant_paginas, char* d
         char* parte_a_escribir = malloc(tamanio + 1);
         memcpy(parte_a_escribir, bloques + bloque_inicial + puntero, tamanio);
         parte_a_escribir[tamanio] = '\0';
-        log_info(logger_io, "Parte a escribir: %s", parte_a_escribir);
         uint32_t direccion = (uint32_t)atoi(substrings[i]);
         escribir_memoria(direccion, tamanio, parte_a_escribir, pid);
         puntero += tamanio;

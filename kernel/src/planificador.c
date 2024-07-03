@@ -127,10 +127,8 @@ void liberar_cpu()
 void ejecutar_proceso(proceso_t *proceso, t_log *logger, int unQuantum)
 {
     t_temporal *timer = temporal_create();
-    log_info(logger, "Algoritmo: %s", algoritmo_planificacion);
     if (!strcmp(algoritmo_planificacion, "FIFO"))
     {
-        log_info(logger, "Se envia el proceso <%d> a CPU", proceso->pid);
         enviar_proceso_a_cpu(proceso, logger);
         esperar_llegada_de_proceso_fifo(proceso, logger, timer);
     }
@@ -208,7 +206,6 @@ void manejar_interrupcion_de_timer(void *args_void)
     {
         temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);
-        log_info(logger_kernel, "TIMER DE PROCESO DESALOJADO %d: %d", proceso->pid, temporal_gettime(timer));
         mandar_fin_de_quantum_de(proceso);
     }
 }
@@ -286,7 +283,6 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
     proceso->registros->SI = SI;
     proceso->registros->DI = DI;
 
-    log_info(logger, "Motivo: %s", motivo_de_desalojo);
     char **substrings;
     char *instruccion_de_motivo_string;
     if (motivo_de_desalojo[strlen(motivo_de_desalojo) - 1] == '\n')
@@ -312,11 +308,8 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         verificar_detencion_de_planificacion();
         liberar_cpu();
     }
-
-    log_info(logger, "Instruccion: %s", instruccion_de_motivo_string);
     proceso_a_interfaz_t *proceso_interfaz = malloc(sizeof(proceso_a_interfaz_t));
     proceso_interfaz->proceso = proceso;
-    log_info(logger_kernel, "%d", instruccion_de_motivo);
 
     switch (instruccion_de_motivo)
     {
