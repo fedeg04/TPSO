@@ -31,7 +31,7 @@ void ingresar_a_ready();
 void ingresar_a_exec();
 void ingresar_a_exit(proceso_t* proceso); 
 void liberar_cpu();
-void mostrar_pids_ready(t_list* ready_list, char* cola);
+void mostrar_pids_cola(t_list* ready_list, char* cola);
 void finalizar_proceso_de_pid(uint32_t pid_proceso);
 bool tiene_el_pid(proceso_t* proceso);
 void buscar_en_cola_y_finalizar_proceso(t_list* cola, pthread_mutex_t mutex); 

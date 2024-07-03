@@ -30,6 +30,7 @@ typedef enum {
     FIN_DE_SLEEP,
     FIN_DE_STDIN,
     FIN_DE_STDOUT,
+    FIN_DE_DIALFS,
     ENVIAR_PCB,
     INTERRUMPIR,
     FETCH,
