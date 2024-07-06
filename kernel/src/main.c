@@ -46,7 +46,8 @@ void liberar_info_interfaces()
 int main(int argc, char *argv[])
 {
     logger_kernel = iniciar_logger("kernel.log", "KERNEL: ");
-    t_config *config_kernel = iniciar_config("kernel.config");
+    //t_config *config_kernel = iniciar_config(argv[1]);
+    t_config *config_kernel = iniciar_config("kernelse.config");
     get_config(config_kernel);
     inicializar_valores();
 

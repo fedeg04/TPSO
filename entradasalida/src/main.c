@@ -8,24 +8,21 @@ void get_config(t_config* config)
     tipo_interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
     puerto_kernel = config_get_string_value(config, "PUERTO_KERNEL");
     ip_kernel = config_get_string_value(config, "IP_KERNEL"); 
-    if(!strcmp(tipo_interfaz, "GENERICA"))
-    {
+    if(!strcmp(tipo_interfaz, "GENERICA")) {
         tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");    
     }
-    else if(!strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT"))
-    {
+    else if(!strcmp(tipo_interfaz, "STDIN") || !strcmp(tipo_interfaz, "STDOUT")) {
         puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
         ip_memoria = config_get_string_value(config, "IP_MEMORIA");
     }
-    else if(!strcmp(tipo_interfaz, "DIALFS"))
-    {
-    tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
-    puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
-    ip_memoria = config_get_string_value(config, "IP_MEMORIA");
-    path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
-    block_size = config_get_int_value(config, "BLOCK_SIZE");
-    block_count = config_get_int_value(config, "BLOCK_COUNT");
-    retraso_compactacion= config_get_int_value(config, "RETRASO_COMPACTACION");
+    else if(!strcmp(tipo_interfaz, "DIALFS")) {
+        tiempo_unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
+        puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
+        ip_memoria = config_get_string_value(config, "IP_MEMORIA");
+        path_base_dialfs = config_get_string_value(config, "PATH_BASE_DIALFS");
+        block_size = config_get_int_value(config, "BLOCK_SIZE");
+        block_count = config_get_int_value(config, "BLOCK_COUNT");
+        retraso_compactacion= config_get_int_value(config, "RETRASO_COMPACTACION");
     }
 }
 
@@ -33,10 +30,10 @@ int main(int argc, char* argv[]) {
     logger_io = iniciar_logger("io.log", "I/O: ");
     log_info(logger_io, "%s", argv[2]); // ./bin/entradasalida "nombre" "unpath"
     nombre = argv[1];
-    //nombre = "int1";
+    //nombre = "FS";
     log_info(logger_io, "%s", nombre); 
     t_config* config_io = iniciar_config(argv[2]);
-    //t_config* config_io = iniciar_config("dialfs.config");
+    //t_config* config_io = iniciar_config("dialfsfs.config");
     get_config(config_io);
 
     controlar_seniales(logger_io);
@@ -169,6 +166,7 @@ void dialfs_atender_kernel() {
         recv(kernel_fd, &tam_archivo, sizeof(uint32_t), 0);
         char* nombre_arch = malloc(tam_archivo);
         recv(kernel_fd, nombre_arch, tam_archivo, 0);
+        usleep(tiempo_unidad_trabajo*1000);
         switch(opcode) {
             case IO_FS_CREATE:
                 log_info(logger_io, "PID: <%d> - Operacion: <IO_FS_CREATE>", proceso_pid);
@@ -610,7 +608,8 @@ void escribir_archivo(char* nombre_arch, uint32_t puntero, uint32_t cant_paginas
     recibir_lectura_memoria(cant_paginas, &string_a_escribir);
     int bloque_inicial = valor_metadata(nombre_arch, "BLOQUE_INICIAL");
     void* bloques = leer_bloques_dat();
-    memcpy(bloques + bloque_inicial + puntero, string_a_escribir, strlen(string_a_escribir));
+    memcpy(bloques + (bloque_inicial*block_size) + puntero, string_a_escribir, strlen(string_a_escribir));
+    log_info(logger_io, "Bloques a escribir: %s", (char*)(bloques + (bloque_inicial*block_size) + puntero));
     escribir_bloques_dat(bloques);
     free(bloques);
     free(string_a_escribir);
@@ -623,9 +622,10 @@ void leer_archivo(char* nombre_arch, uint32_t puntero, int cant_paginas, char* d
     for (int i = 0; i < cant_paginas*2; i=i+2) {
         uint32_t tamanio = (uint32_t)atoi(substrings[i+1]);
         char* parte_a_escribir = malloc(tamanio + 1);
-        memcpy(parte_a_escribir, bloques + bloque_inicial + puntero, tamanio);
+        memcpy(parte_a_escribir, bloques + (bloque_inicial*block_size) + puntero, tamanio);
         parte_a_escribir[tamanio] = '\0';
         uint32_t direccion = (uint32_t)atoi(substrings[i]);
+        log_info(logger_io, "Parte a escribir en FS READ: %s", parte_a_escribir);
         escribir_memoria(direccion, tamanio, parte_a_escribir, pid);
         puntero += tamanio;
         free(parte_a_escribir);

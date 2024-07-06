@@ -26,9 +26,8 @@ void liberar_semaforos()
 }
 
 int main(int argc, char* argv[]) {
-
     logger_memoria = iniciar_logger("memoria.log", "MEMORIA: ");
-    t_config* config_memoria = iniciar_config("memoria.config");
+    t_config* config_memoria = iniciar_config(argv[1]);
     get_config(config_memoria);
 
     archivos_procesos = list_create();

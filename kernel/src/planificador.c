@@ -663,7 +663,7 @@ void iniciar_planificacion()
 {
     for (int i = 0; i < reanudar_planificacion; i++)
     {
-        sem_wait(&sem_detener_planificacion);
+        sem_post(&sem_detener_planificacion);
     }
     pthread_mutex_lock(&mutex_reanudar_planificacion);
     reanudar_planificacion = 0;
