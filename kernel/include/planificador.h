@@ -49,4 +49,5 @@ void verificar_multiprogramacion();
 uint32_t _get_pid(proceso_t* proceso);
 proceso_t *obtenerSiguienteAReady();
 proceso_t *obtenerSiguienteAExec();
+void finalizar_procesos_de_interfaz(char* nombre);
 #endif

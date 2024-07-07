@@ -62,6 +62,7 @@ void procesar_conexion(void *args_void)
             nombre = malloc(tam);
             recv(socket_cliente, nombre, tam, 0);
             desconectar_interfaz(nombre);
+            finalizar_procesos_de_interfaz(nombre);
             free(nombre);
             break;
         case FIN_DE_SLEEP:

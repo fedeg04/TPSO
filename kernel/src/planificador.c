@@ -669,3 +669,14 @@ void iniciar_planificacion()
     reanudar_planificacion = 0;
     pthread_mutex_unlock(&mutex_reanudar_planificacion);
 }
+
+void finalizar_procesos_de_interfaz(char* nombre){
+    interfaz_t* interfaz = buscar_interfaz(nombre);
+    while(!list_is_empty(interfaz->cola)){
+        proceso_t* proceso = list_remove(interfaz->cola, 0);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: DESCONEXION_INTERFAZ", proceso->pid);
+        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
+        entrar_a_exit(proceso);
+    }
+
+}
