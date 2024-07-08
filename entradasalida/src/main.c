@@ -391,8 +391,8 @@ void cambiar_tamanio_archivo(char* nombre, int tamanio_nuevo, int tamanio, int b
         if (!puede_agrandar_sin_compactar(nombre, tamanio_nuevo, tamanio, bloque_inicial)) {
             log_info(logger_io, "PID: <%d> - Inicio Compactación.", pid);
             bloque_inicial = compactar(nombre);
-            log_info(logger_io, "PID: <%d> - Fin Compactación.", pid);
             usleep(retraso_compactacion*1000);
+            log_info(logger_io, "PID: <%d> - Fin Compactación.", pid);
         }
         primer_bloque = cant_bloques_actuales + bloque_inicial;
         ultimo_bloque = cant_bloques_nuevos + cant_bloques_actuales + bloque_inicial -1;
@@ -602,14 +602,12 @@ void eliminar_archivo(char* nombre, uint32_t pid) {
 }
 
 void escribir_archivo(char* nombre_arch, uint32_t puntero, uint32_t cant_paginas, char* direcciones_bytes, uint32_t pid) {
-    log_info(logger_io, "El string que llega: %s", direcciones_bytes);
     char* string_a_escribir = string_new();
     enviar_lectura_memoria(pid, cant_paginas, direcciones_bytes);
     recibir_lectura_memoria(cant_paginas, &string_a_escribir);
     int bloque_inicial = valor_metadata(nombre_arch, "BLOQUE_INICIAL");
     void* bloques = leer_bloques_dat();
     memcpy(bloques + (bloque_inicial*block_size) + puntero, string_a_escribir, strlen(string_a_escribir));
-    log_info(logger_io, "Bloques a escribir: %s", (char*)(bloques + (bloque_inicial*block_size) + puntero));
     escribir_bloques_dat(bloques);
     free(bloques);
     free(string_a_escribir);
@@ -625,7 +623,6 @@ void leer_archivo(char* nombre_arch, uint32_t puntero, int cant_paginas, char* d
         memcpy(parte_a_escribir, bloques + (bloque_inicial*block_size) + puntero, tamanio);
         parte_a_escribir[tamanio] = '\0';
         uint32_t direccion = (uint32_t)atoi(substrings[i]);
-        log_info(logger_io, "Parte a escribir en FS READ: %s", parte_a_escribir);
         escribir_memoria(direccion, tamanio, parte_a_escribir, pid);
         puntero += tamanio;
         free(parte_a_escribir);

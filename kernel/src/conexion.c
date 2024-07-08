@@ -69,7 +69,6 @@ void procesar_conexion(void *args_void)
             recv(socket_cliente, &tam, sizeof(uint32_t), 0);
             nombre = malloc(tam);
             recv(socket_cliente, nombre, tam, 0);
-            log_info(logger, "VOLVIO PROCESO DE HACER SLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEP");
             interfaz = buscar_interfaz(nombre);
             sem_post(&interfaz->sem_vuelta);
             free(nombre);
@@ -101,7 +100,6 @@ void procesar_conexion(void *args_void)
         default:
         }
     }
-    log_info(logger_kernel, "desconectado por bobi");
     return;
 }
 
