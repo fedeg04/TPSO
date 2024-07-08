@@ -204,7 +204,7 @@ void manejar_interrupcion_de_timer(void *args_void)
     }
     if (ejecucion == ejecuciones && list_find(pcbs_exec, (void *)_es_el_proceso))
     {
-        temporal_stop(timer);
+        //temporal_stop(timer);
         log_info(logger_kernel, "PID: %d - Desalojado por fin de Quantum", proceso->pid);
         mandar_fin_de_quantum_de(proceso);
     }
