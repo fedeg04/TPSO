@@ -270,7 +270,7 @@ void enviar_proceso_a_interfaz(proceso_a_interfaz_t *proceso_a_interfaz, char *t
             }
             else
             {
-                log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OPERACIÓN INVÁLIDA PARA %s", proceso_a_interfaz->proceso->pid, proceso_a_interfaz->interfaz);
+                log_info(logger_kernel, "Finaliza el proceso %d - INVALID_INTERFACE", proceso_a_interfaz->proceso->pid);
                 log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
                 entrar_a_exit(proceso_a_interfaz->proceso);
             }
@@ -284,7 +284,7 @@ void enviar_proceso_a_interfaz(proceso_a_interfaz_t *proceso_a_interfaz, char *t
     }
     else
     {
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: LA INTERFAZ NO EXISTE", proceso_a_interfaz->proceso->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INVALID_INTERFACE", proceso_a_interfaz->proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
         entrar_a_exit(proceso_a_interfaz->proceso);
     }

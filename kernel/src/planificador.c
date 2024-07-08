@@ -404,17 +404,17 @@ void esperar_contexto_de_ejecucion(proceso_t *proceso, t_log *logger, t_temporal
         ingresar_a_exec();
         break;
     case OUTOFMEMORY:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT OF MEMORY", proceso->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
         entrar_a_exit(proceso);
         break;
     case FINALIZAR_PROCESO:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
         entrar_a_exit(proceso);
         break;
     case RECURSO_INVALIDO:
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: RECURSO_INVALIDO", proceso->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INVALID_RESOURCE", proceso->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
         entrar_a_exit(proceso);
         break;
