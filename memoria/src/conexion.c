@@ -25,10 +25,12 @@ void procesar_conexion(void* args_void) {
                 usleep(retardo_respuesta * 1000);                
                 uint32_t size;
                 recv(socket_cliente, &size, sizeof(uint32_t), 0);
-                char* path = malloc(size);
-                recv(socket_cliente, path, size, 0);
+                char* path_con_barra = malloc(size);
+                recv(socket_cliente, path_con_barra, size, 0);
                 uint32_t pid;
                 recv(socket_cliente, &pid, sizeof(uint32_t), 0);
+                char* path = string_substring_from(path_con_barra, 1);
+                free(path_con_barra);
                 if(existe_archivo(path)) {
                     pthread_mutex_lock(&mutex_archivo_proceso);
                     agregar_proceso(archivos_procesos, path, pid);

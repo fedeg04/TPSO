@@ -155,4 +155,5 @@ extern void esperar_llegada_de_proceso_fifo(proceso_t *proceso, t_log *logger, t
 extern void esperar_llegada_de_proceso_rr_vrr(proceso_t *proceso, t_temporal *timer, t_log *logger);
 extern t_list* pids_eliminados;
 extern bool pids_iguales(uint32_t pid1, uint32_t pid2);
+extern void finalizar_procesos_de_interfaz(char* nombre);
 #endif

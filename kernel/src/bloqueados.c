@@ -1,4 +1,5 @@
 #include <../include/bloqueados.h>
+/*
 void enviar_proceso_io_gen_sleep(proceso_t *proceso, char *interfaz_sleep, uint32_t uni_de_trabajo)
 {
     if (!strcmp("GENERICA", interfaz_sleep))
@@ -18,6 +19,7 @@ void enviar_proceso_io_gen_sleep(proceso_t *proceso, char *interfaz_sleep, uint3
         entrar_a_exit(proceso);
     }
 }
+*/
 
 int estaConectada(char *interfaz)
 {
@@ -286,24 +288,6 @@ void enviar_proceso_a_interfaz(proceso_a_interfaz_t *proceso_a_interfaz, char *t
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
         entrar_a_exit(proceso_a_interfaz->proceso);
     }
-    /*
- if(!strcmp(tipo_interfaz, proceso_a_interfaz->interfaz)) {
-        if(estaConectada(proceso_a_interfaz->interfaz)){
-                    hacer_peticion(proceso_a_interfaz);
-        }
-        else {
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ NO CONECTADA", proceso_a_interfaz->proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
-        entrar_a_exit(proceso_a_interfaz->proceso);
-
-        }
-    }
-    else {
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERFAZ INCORRECTA", proceso_a_interfaz->proceso->pid);
-        log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_interfaz->proceso->pid);
-        entrar_a_exit(proceso_a_interfaz->proceso);
-    }
-    */
 }
 
 interfaz_t *buscar_interfaz(char *nombre)
@@ -492,6 +476,10 @@ void hacer_io_fs_delete(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *inte
         sem_wait(&interfaz->sem_vuelta);
         recibir_fin_de_peticion(interfaz);
     }
+     else
+    {
+        pthread_mutex_unlock(&interfaz->mutex_exec);
+    }
 }
 
 void hacer_io_fs_truncate(proceso_a_interfaz_t *proceso_interfaz, interfaz_t *interfaz)
@@ -638,7 +626,7 @@ void volver_a_exec(proceso_t *proceso, uint32_t tiempo_en_cpu, t_temporal *timer
         esperar_llegada_de_proceso_fifo(proceso, logger_kernel, timer);
     }
 }
-
+/*
 void recibir_fin_io_stdin_read(interfaz_t *interfaz)
 {
     pthread_mutex_lock(&mutex_stdin_list);
@@ -656,7 +644,7 @@ void recibir_fin_io_stdout_write()
     pthread_mutex_unlock(&mutex_stdout_exec);
     volver_a_ready(proceso_a_desbloquear);
 }
-
+*/
 void recibir_fin_de_peticion(interfaz_t *interfaz)
 {
     if (interfaz->fin_de_proceso != 1)

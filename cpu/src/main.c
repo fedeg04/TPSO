@@ -31,7 +31,7 @@ void liberar_semaforos() {
 int main(int argc, char *argv[])
 {
     logger_cpu = iniciar_logger("cpu.log", "CPU: ");
-    t_config *config_cpu = iniciar_config("cpu.config");
+    t_config *config_cpu = iniciar_config(argv[1]);
     get_config(config_cpu);
 
     registros_cpu = inicializar_registros();

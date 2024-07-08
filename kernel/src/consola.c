@@ -162,8 +162,4 @@ void listar_procesos()
     }
     log_info(logger_kernel, "NEW");
     mostrar_pids_cola(pcbs_new, "NEW");
-    /*
-    log_info(logger_kernel, "EXIT");
-    mostrar_pids_cola(pcbs_exit, "EXIT");
-    */
 }
