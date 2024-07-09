@@ -9,7 +9,7 @@ void procesar_conexion(void* args_void) {
     op_code opcode;
     while (socket_cliente != 1) {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code)){
-            log_info(logger, "Tiro error");
+            //log_info(logger, "Tiro error");
             return;
         }
         

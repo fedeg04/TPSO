@@ -492,7 +492,7 @@ void buscar_en_cola_y_finalizar_proceso(t_list *cola, pthread_mutex_t mutex)
     pthread_mutex_unlock(&mutex);
     if (proceso != NULL)
     {
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso->pid);
         if (cola == pcbs_ready || cola == pcbs_ready_prioritarios)
         {
             log_info(logger_kernel, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXIT>", proceso->pid);
@@ -536,7 +536,7 @@ void buscar_en_cola_de_bloqueados_y_finalizar_proceso(interfaz_t *interfaz)
 
     if (proceso_a_eliminar != NULL)
     {
-        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso_a_eliminar->pid);
+        log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_a_eliminar->pid);
         log_info(logger_kernel, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>", proceso_a_eliminar->pid);
         entrar_a_exit(proceso_a_eliminar);
     }
@@ -555,7 +555,7 @@ void buscar_en_colas_de_bloqueados_wait_y_finalizar_proceso()
             pthread_mutex_unlock(&mutex_recursos_list[i]);
             if (proceso != NULL)
             {
-                log_info(logger_kernel, "Finaliza el proceso %d - Motivo: FINALIZAR_PROCESO", proceso->pid);
+                log_info(logger_kernel, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso->pid);
                 log_info(logger_kernel, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>", proceso->pid);
                 entrar_a_exit(proceso);
             }

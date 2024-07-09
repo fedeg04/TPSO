@@ -15,7 +15,7 @@ void procesar_conexion(void *args_void)
     {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), 0)) != sizeof(op_code))
         {
-            log_info(logger, "Tiro error");
+            //log_info(logger, "Tiro error");
             return;
         }
         log_info(logger_kernel, "OPCODE: %d", opcode);
