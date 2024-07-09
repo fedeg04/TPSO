@@ -15,7 +15,7 @@ void procesar_conexion_interrupt(void *args_void)
     {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code))
         {
-            log_info(logger, "Tiro error");
+            //log_info(logger, "Tiro error");
             return;
         }
         switch (opcode)
@@ -44,7 +44,7 @@ void procesar_conexion_dispatch(void *args_void)
     {
         if ((recv(socket_cliente, &opcode, sizeof(op_code), MSG_WAITALL)) != sizeof(op_code))
         {
-            log_info(logger, "Tiro error");
+            //log_info(logger, "Tiro error");
             return;
         }
         switch(opcode) {
