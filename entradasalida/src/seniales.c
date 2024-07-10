@@ -4,12 +4,12 @@ t_log* logger_sen;
 
 void controlar_seniales(t_log* logger) {
     logger_sen = logger;
-    log_info(logger_sen, "Llegue aca");
+    //log_info(logger_sen, "Llegue aca");
     signal(SIGINT, cerrar_seniales);
 }
 
 void cerrar_seniales() {
-    log_info(logger_sen, "Llegue aca");
+    //log_info(logger_sen, "Llegue aca");
     avisar_desconexion_kernel();
     exit(0);
 }
