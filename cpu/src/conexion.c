@@ -139,7 +139,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             uint8_t cant_paginas = cantidad_paginas_enviar(cantidad_bytes_in, segundo_valor);
             uint32_t lectura = enviar_mov_in(cant_paginas, pcb->pid, cantidad_bytes_in, desplazamiento_direccion_logica(segundo_valor), pagina_direccion_logica(segundo_valor), logger);
             set_registros(primer_parametro, lectura);
-            log_info(logger, "Valor Leido: %d", lectura);
+            //log_info(logger, "Valor Leido: %d", lectura);
             return 1;
         case MOV_OUT:
             log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
@@ -172,7 +172,7 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             leido[0] = '\0';
             leer_string(leido, cant_pags_leer, desplazamiento_direccion_logica(get_valor_registro("SI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("SI")), logger);
             leido[atoi(primer_parametro)] = '\0';
-            log_info(logger, "Que carajo se lee: %s", leido);
+            //log_info(logger, "Que carajo se lee: %s", leido);
             uint8_t cant_pags_escribir = cantidad_paginas_enviar(atoi(primer_parametro), get_valor_registro("DI"));
             return escribir_string(leido, cant_pags_escribir, desplazamiento_direccion_logica(get_valor_registro("DI")), pcb->pid, atoi(primer_parametro), pagina_direccion_logica(get_valor_registro("DI")),logger);
         case WAIT:
