@@ -232,12 +232,12 @@ int ejecutar_instruccion(char** parametros, char* instruccion, t_log* logger, pr
             envio_kernel_io(IO_STDOUT_WRITE, primer_parametro, cant_paginas_write, tercer_valor, desplazamiento_direccion_logica(segundo_valor), pcb, socket, pagina_direccion_logica(segundo_valor), logger);
             return 0;
         case IO_FS_CREATE:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             return 0;
         case IO_FS_DELETE:
-            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s %s>", pcb->pid, comando, primer_parametro, segundo_parametro, tercer_parametro);
+            log_info(logger, "PID: <%d> - Ejecutando: <%s> - <%s %s>", pcb->pid, comando, primer_parametro, segundo_parametro);
             registros_cpu->PC++;
             enviar_contexto(socket, pcb, instruccion);
             return 0;

@@ -37,7 +37,7 @@ int tamanio_proceso(uint32_t pid)
     } else {
         pagina_t* ultima_pagina = buscar_pagina_por_nro(tabla_proceso, tabla_proceso->cantidad_paginas - 1);
         tamanio_proceso += ultima_pagina->bytes_ocupados;
-        tamanio_proceso += (tabla_proceso->cantidad_paginas-1)*32;
+        tamanio_proceso += (tabla_proceso->cantidad_paginas-1)*tam_pagina;
     }
     return tamanio_proceso;
 }
